@@ -47,7 +47,7 @@ export const appConfig = {
   },
   waterLevels: {
     enabled: process.env.WATER_LEVELS_ENABLED !== "false",
-    csvPath: process.env.DAMS_CSV_PATH ?? "dams_data_new.csv",
+    csvPath: process.env.DAMS_CSV_PATH ?? "data/dams_data_new.csv",
   },
 } as const;
 
