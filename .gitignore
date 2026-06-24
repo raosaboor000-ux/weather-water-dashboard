@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+.env
+.env.local
+.env*.local
+data/google-service-account.json
+data/*.json
+!data/.gitkeep
+*.log
+logs/*.log
+.DS_Store
