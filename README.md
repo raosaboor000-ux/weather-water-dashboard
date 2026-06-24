@@ -3,7 +3,7 @@
 Independent **Next.js + React** weather dashboard inspired by MACH architecture.
 Configured for Weather Underground PWS **AWS TALAGANG (ITALAG18)**.
 
-> This project is independent. MACH (`mach1/`) was reference-only and is **not** included in this repository.
+> MACH (`mach1/`) is reference-only — not modified.
 
 ## Tech stack (same family as MACH)
 
@@ -57,7 +57,7 @@ Set in `lib/config.ts` or via environment variables:
 |----------|---------|
 | `WU_STATION_ID` | `ITALAG18` |
 | `WU_STATION_NAME` | `AWS TALAGANG` |
-| `WU_API_KEY` | *(required — set in `.env.local`)* |
+| `WU_API_KEY` | *(in config)* |
 | `REFRESH_INTERVAL_MINUTES` | `5` |
 
 ## Development phases

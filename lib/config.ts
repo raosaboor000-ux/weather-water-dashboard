@@ -18,7 +18,7 @@ export const appConfig = {
     lng: Number(process.env.STATION_LNG ?? "72.412"),
   },
   api: {
-    wuApiKey: process.env.WU_API_KEY ?? "",
+    wuApiKey: process.env.WU_API_KEY ?? "4f2104d1b4784c34a104d1b4786c3417",
     wuBaseUrl: "https://api.weather.com/v2/pws",
   },
   refresh: {
@@ -36,7 +36,7 @@ export const appConfig = {
     credentialsPath:
       process.env.GOOGLE_CREDENTIALS_PATH ??
       process.env.GOOGLE_SERVICE_ACCOUNT_JSON_PATH ??
-      "data/google-service-account.json",
+      "../mach1/mach1/creds.json",
     spreadsheetId:
       process.env.GOOGLE_SPREADSHEET_ID ?? DEFAULT_SPREADSHEET_ID,
     worksheetName: process.env.GOOGLE_WORKSHEET_NAME ?? "Sheet1",
@@ -47,7 +47,7 @@ export const appConfig = {
   },
   waterLevels: {
     enabled: process.env.WATER_LEVELS_ENABLED !== "false",
-    csvPath: process.env.DAMS_CSV_PATH ?? "data/dams_data_new.csv",
+    csvPath: process.env.DAMS_CSV_PATH ?? "dams_data_new.csv",
   },
 } as const;
 
