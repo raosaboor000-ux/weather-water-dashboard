@@ -14,9 +14,16 @@ import { firstNumber, uvRiskLabel } from "@/lib/weather-parse";
 
 type Props = {
   data: WeatherLatest;
+  offline?: boolean;
   /** When this changes, cards re-animate on refresh. */
   refreshKey?: number;
 };
+
+const BLANK = "—";
+
+function val(value: string, offline: boolean) {
+  return offline ? BLANK : value;
+}
 
 function IconWrap({ children }: { children: React.ReactNode }) {
   return (
@@ -26,17 +33,17 @@ function IconWrap({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function MetricGrid({ data, refreshKey = 0 }: Props) {
+export function MetricGrid({ data, offline = false, refreshKey = 0 }: Props) {
   const uvNum = firstNumber(data.uv) ?? 0;
 
   const cards = [
     {
       title: "Temperature",
-      primaryValue: data.temperature,
+      primaryValue: val(data.temperature, offline),
       details: [
-        { label: "Dew point", value: data.dewPoint },
-        { label: "Humidity", value: data.humidity },
-        { label: "Heat index", value: data.heatIndex ?? "—" },
+        { label: "Dew point", value: val(data.dewPoint, offline) },
+        { label: "Humidity", value: val(data.humidity, offline) },
+        { label: "Heat index", value: offline ? BLANK : (data.heatIndex ?? BLANK) },
       ],
       icon: (
         <IconWrap>
@@ -47,10 +54,10 @@ export function MetricGrid({ data, refreshKey = 0 }: Props) {
     },
     {
       title: "Wind",
-      primaryValue: data.speed,
+      primaryValue: val(data.speed, offline),
       details: [
-        { label: "Direction", value: data.wind },
-        { label: "Gust", value: data.gust },
+        { label: "Direction", value: val(data.wind, offline) },
+        { label: "Gust", value: val(data.gust, offline) },
       ],
       icon: (
         <IconWrap>
@@ -61,8 +68,8 @@ export function MetricGrid({ data, refreshKey = 0 }: Props) {
     },
     {
       title: "Pressure",
-      primaryValue: data.pressure,
-      details: [{ label: "Barometric", value: data.pressure }],
+      primaryValue: val(data.pressure, offline),
+      details: [{ label: "Barometric", value: val(data.pressure, offline) }],
       icon: (
         <IconWrap>
           <Gauge className="h-7 w-7" />
@@ -72,10 +79,10 @@ export function MetricGrid({ data, refreshKey = 0 }: Props) {
     },
     {
       title: "Rainfall",
-      primaryValue: data.precipTotal ?? "0.00 mm",
+      primaryValue: val(data.precipTotal ?? "0.00 mm", offline),
       details: [
-        { label: "Precip rate", value: data.precipRate ?? "0.00 mm" },
-        { label: "Rain today", value: data.precipTotal ?? "0.00 mm" },
+        { label: "Precip rate", value: val(data.precipRate ?? "0.00 mm", offline) },
+        { label: "Rain today", value: val(data.precipTotal ?? "0.00 mm", offline) },
       ],
       icon: (
         <IconWrap>
@@ -86,8 +93,8 @@ export function MetricGrid({ data, refreshKey = 0 }: Props) {
     },
     {
       title: "Solar radiation",
-      primaryValue: data.solar,
-      details: [{ label: "Current", value: data.solar }],
+      primaryValue: val(data.solar, offline),
+      details: [{ label: "Current", value: val(data.solar, offline) }],
       icon: (
         <IconWrap>
           <Sun className="h-7 w-7" />
@@ -97,11 +104,11 @@ export function MetricGrid({ data, refreshKey = 0 }: Props) {
     },
     {
       title: "UV index",
-      primaryValue: data.uv,
+      primaryValue: val(data.uv, offline),
       details: [
-        { label: "UV risk", value: uvRiskLabel(uvNum) },
-        { label: "Daily high", value: data.dailyHigh ?? "—" },
-        { label: "Daily low", value: data.dailyLow ?? "—" },
+        { label: "UV risk", value: offline ? BLANK : uvRiskLabel(uvNum) },
+        { label: "Daily high", value: offline ? BLANK : (data.dailyHigh ?? BLANK) },
+        { label: "Daily low", value: offline ? BLANK : (data.dailyLow ?? BLANK) },
       ],
       icon: (
         <IconWrap>

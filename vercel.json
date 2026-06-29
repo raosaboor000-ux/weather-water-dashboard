@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/weather/latest",
+      "schedule": "0 6 * * *"
+    }
+  ]
+}

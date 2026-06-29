@@ -6,6 +6,8 @@ out/
 .env*.local
 data/google-service-account.json
 data/*.json
+local-receiver-*.json
+*-6516709d0c3e.json
 !data/.gitkeep
 *.log
 logs/*.log

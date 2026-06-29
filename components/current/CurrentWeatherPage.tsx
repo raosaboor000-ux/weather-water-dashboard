@@ -15,6 +15,8 @@ import { fetchLatestWeather } from "@/lib/weather-client";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
+const BLANK = "—";
+
 export function CurrentWeatherPage() {
   const {
     data,
@@ -40,9 +42,12 @@ export function CurrentWeatherPage() {
     );
   }
 
-  const lastUpdatedLabel = data
-    ? `${data.dateLocal ?? "—"} ${data.time}`
-    : undefined;
+  const offline = data ? !data.online : false;
+
+  const lastUpdatedLabel =
+    data?.online
+      ? `${data.dateLocal ?? "—"} ${data.time}`
+      : undefined;
 
   return (
     <div className="dashboard-shell pb-12">
@@ -86,15 +91,19 @@ export function CurrentWeatherPage() {
             transition={{ duration: 0.45, delay: 0.05, ease: easeOut }}
           >
             <CurrentConditionsHero
-              temperature={data.temperature}
-              windSummary={`Wind ${data.wind} · ${data.speed}${
-                data.gust ? ` · Gust ${data.gust}` : ""
-              }`}
-              humidity={data.humidity}
-              pressure={data.pressure}
-              dewPoint={data.dewPoint}
-              date={data.dateLocal ?? "—"}
-              time={data.time}
+              temperature={offline ? BLANK : data.temperature}
+              windSummary={
+                offline
+                  ? BLANK
+                  : `Wind ${data.wind} · ${data.speed}${
+                      data.gust ? ` · Gust ${data.gust}` : ""
+                    }`
+              }
+              humidity={offline ? BLANK : data.humidity}
+              pressure={offline ? BLANK : data.pressure}
+              dewPoint={offline ? BLANK : data.dewPoint}
+              date={offline ? BLANK : (data.dateLocal ?? BLANK)}
+              time={offline ? BLANK : data.time}
             />
           </motion.div>
 
@@ -107,7 +116,7 @@ export function CurrentWeatherPage() {
               title="Station metrics"
               description="Temperature, wind, pressure, rainfall, solar, and UV"
             />
-            <MetricGrid data={data} refreshKey={dataUpdatedAt} />
+            <MetricGrid data={data} offline={offline} refreshKey={dataUpdatedAt} />
           </motion.section>
         </>
       ) : isError ? (

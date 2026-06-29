@@ -34,7 +34,7 @@ export function DashboardHeader({
         ) : null}
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <StatusBadge online={online} />
-          {lastUpdated ? (
+          {online && lastUpdated ? (
             <span className="text-xs text-ink-subtle">
               Last updated: <span className="font-mono">{lastUpdated}</span>
             </span>
