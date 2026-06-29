@@ -287,6 +287,11 @@ async function fetchObservations(path: string): Promise<Observation[]> {
     throw new Error("Rate limit exceeded — please try again shortly.");
   }
 
+  if (res.status === 204) {
+    logger.warn("WU API returned no content", { path, stationId: appConfig.station.id });
+    return [];
+  }
+
   if (!res.ok) {
     const text = await res.text();
     logger.error("WU API HTTP error", { path, status: res.status, body: text.slice(0, 200) });
@@ -307,6 +312,14 @@ function dailyHighLow(observations: Observation[]): { high?: number; low?: numbe
   return { high: Math.max(...temps), low: Math.min(...temps) };
 }
 
+function latestObservation(list: Observation[]): Observation | undefined {
+  return [...list].sort(
+    (a, b) =>
+      new Date(b.obsTimeUtc ?? 0).getTime() -
+      new Date(a.obsTimeUtc ?? 0).getTime()
+  )[0];
+}
+
 /** Server-side Weather Underground API client. */
 export class WeatherAPI {
   async getCurrent(): Promise<WeatherLatest> {
@@ -315,9 +328,17 @@ export class WeatherAPI {
       fetchObservations("observations/all/1day").catch(() => [] as Observation[]),
     ]);
 
-    const o = current[0];
+    const o = latestObservation(
+      current[0] ? current : today
+    );
+
     if (!o?.obsTimeUtc) {
-      throw new Error("No current observation returned for this station.");
+      const hasKey = Boolean(appConfig.api.wuApiKey?.trim());
+      throw new Error(
+        hasKey
+          ? "No live observation returned for this station. Check WU_STATION_ID or try again later."
+          : "Weather Underground API key missing. Set WU_API_KEY in Vercel environment variables."
+      );
     }
 
     const { high, low } = dailyHighLow(today);

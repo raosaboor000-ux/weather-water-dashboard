@@ -18,7 +18,9 @@ export const appConfig = {
     lng: Number(process.env.STATION_LNG ?? "72.412"),
   },
   api: {
-    wuApiKey: process.env.WU_API_KEY ?? "4f2104d1b4784c34a104d1b4786c3417",
+    wuApiKey:
+      process.env.WU_API_KEY?.trim() ||
+      "4f2104d1b4784c34a104d1b4786c3417",
     wuBaseUrl: "https://api.weather.com/v2/pws",
   },
   refresh: {
@@ -32,11 +34,13 @@ export const appConfig = {
     pressureUnit: (process.env.PRESSURE_UNIT ?? "hpa") as "hpa",
   },
   googleSheets: {
-    enabled: process.env.GOOGLE_SHEETS_ENABLED !== "false",
+    enabled:
+      process.env.GOOGLE_SHEETS_ENABLED === "true" ||
+      Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim()),
     credentialsPath:
       process.env.GOOGLE_CREDENTIALS_PATH ??
       process.env.GOOGLE_SERVICE_ACCOUNT_JSON_PATH ??
-      "../mach1/mach1/creds.json",
+      "",
     spreadsheetId:
       process.env.GOOGLE_SPREADSHEET_ID ?? DEFAULT_SPREADSHEET_ID,
     worksheetName: process.env.GOOGLE_WORKSHEET_NAME ?? "Sheet1",
