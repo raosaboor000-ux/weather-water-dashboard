@@ -8,6 +8,7 @@ import {
 } from "@/lib/dams-status";
 import { formatDamDateLabel } from "@/lib/dams-format";
 import { Card } from "@/components/ui/Card";
+import { DamFillGauge } from "@/components/water/DamFillGauge";
 import { DamSelect } from "@/components/water/DamSelect";
 
 type Props = {
@@ -62,7 +63,9 @@ export function DamDetails({
       {!dam ? (
         <p className="text-sm text-ink-muted">No data for this dam.</p>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <>
+          <DamFillGauge dam={dam} />
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Detail
             label="Reading date"
             value={formatDamDateLabel(dam.date)}
@@ -111,6 +114,7 @@ export function DamDetails({
             />
           )}
         </div>
+        </>
       )}
     </Card>
   );

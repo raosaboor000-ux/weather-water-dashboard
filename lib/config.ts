@@ -7,6 +7,11 @@ import {
   DEFAULT_SPREADSHEET_ID,
   SERVICE_ACCOUNT_EMAIL,
 } from "@/lib/sheet-config";
+import {
+  DEFAULT_DAMS_SPREADSHEET_ID,
+  DEFAULT_DAMS_WORKSHEET_NAME,
+  damsSpreadsheetUrl,
+} from "@/lib/dams-sheet-config";
 
 export const appConfig = {
   station: {
@@ -51,7 +56,17 @@ export const appConfig = {
   },
   waterLevels: {
     enabled: process.env.WATER_LEVELS_ENABLED !== "false",
+    source: (process.env.DAMS_DATA_SOURCE ?? "sheets") as "sheets" | "csv",
     csvPath: process.env.DAMS_CSV_PATH ?? "data/dams_data_new.csv",
+    googleSheet: {
+      spreadsheetId:
+        process.env.DAMS_SPREADSHEET_ID ?? DEFAULT_DAMS_SPREADSHEET_ID,
+      worksheetName:
+        process.env.DAMS_WORKSHEET_NAME ?? DEFAULT_DAMS_WORKSHEET_NAME,
+      spreadsheetUrl: damsSpreadsheetUrl(
+        process.env.DAMS_SPREADSHEET_ID ?? DEFAULT_DAMS_SPREADSHEET_ID
+      ),
+    },
   },
 } as const;
 

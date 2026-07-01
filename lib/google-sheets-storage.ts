@@ -7,9 +7,12 @@
  * Share the sheet with the service account email (Editor access).
  */
 
-import { readFileSync } from "node:fs";
-import { isAbsolute, resolve } from "node:path";
 import { appConfig } from "@/lib/config";
+import {
+  getSheetsClient,
+  loadServiceAccountJson,
+  quoteSheetName,
+} from "@/lib/google-sheets-auth";
 import { logger } from "@/lib/logger";
 import { DEFAULT_SPREADSHEET_ID } from "@/lib/sheet-config";
 import {
@@ -24,59 +27,6 @@ import type { WeatherHistoryRow, WeatherLatest } from "@/lib/types";
 import type { sheets_v4 } from "googleapis";
 
 type SheetsApi = sheets_v4.Sheets | null;
-
-let warnedMissingCredentials = false;
-
-function quoteSheetName(name: string): string {
-  if (/^[A-Za-z0-9_]+$/.test(name)) return name;
-  return `'${name.replace(/'/g, "''")}'`;
-}
-
-function loadServiceAccountJson(): string | null {
-  const inline = process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim();
-  if (inline) return inline;
-
-  const filePath =
-    process.env.GOOGLE_SERVICE_ACCOUNT_JSON_PATH?.trim() ||
-    appConfig.googleSheets.credentialsPath?.trim();
-  if (!filePath) return null;
-
-  try {
-    const resolved = isAbsolute(filePath)
-      ? filePath
-      : resolve(process.cwd(), filePath);
-    return readFileSync(resolved, "utf8");
-  } catch (err) {
-    logger.error("Failed to read Google credentials file", { filePath, err: String(err) });
-    return null;
-  }
-}
-
-async function getSheetsClient(): Promise<SheetsApi | null> {
-  const json = loadServiceAccountJson();
-  if (!json) {
-    if (!warnedMissingCredentials) {
-      warnedMissingCredentials = true;
-      logger.warn(
-        "Google Sheets disabled — set GOOGLE_SERVICE_ACCOUNT_JSON_PATH or GOOGLE_SERVICE_ACCOUNT_JSON"
-      );
-    }
-    return null;
-  }
-
-  try {
-    const { google } = await import("googleapis");
-    const credentials = JSON.parse(json) as Record<string, unknown>;
-    const auth = new google.auth.GoogleAuth({
-      credentials,
-      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-    });
-    return google.sheets({ version: "v4", auth });
-  } catch (err) {
-    logger.error("Google Sheets auth failed", { err: String(err) });
-    return null;
-  }
-}
 
 async function resolveSheetRange(sheets: sheets_v4.Sheets) {
   const spreadsheetId = appConfig.googleSheets.spreadsheetId || DEFAULT_SPREADSHEET_ID;

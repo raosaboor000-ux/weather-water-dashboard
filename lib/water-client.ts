@@ -4,6 +4,7 @@ import type {
   DamSnapshot,
   TrendDirection,
 } from "@/lib/dams-types";
+import type { WaterKpis } from "@/lib/dams-status";
 
 export type WaterOverviewResponse = {
   date: string;
@@ -13,6 +14,7 @@ export type WaterOverviewResponse = {
     lowestStorage?: DamSnapshot;
     belowDead: DamSnapshot[];
     spillAlerts: DamSnapshot[];
+    kpis: WaterKpis;
   };
 };
 
@@ -20,6 +22,11 @@ export type WaterMetaResponse = {
   dams: DamMetadata[];
   dates: string[];
   latestDate: string;
+  source: "google_sheets" | "csv";
+  spreadsheetId?: string;
+  worksheetName?: string;
+  spreadsheetUrl?: string;
+  csvPath?: string;
 };
 
 export type WaterReadingsResponse = {
@@ -41,17 +48,21 @@ async function readApi<T>(url: string): Promise<T> {
   return body as T;
 }
 
-export async function fetchWaterMeta(): Promise<WaterMetaResponse> {
-  return readApi<WaterMetaResponse>("/api/water-levels?mode=meta");
+export async function fetchWaterMeta(refresh = false): Promise<WaterMetaResponse> {
+  const params = new URLSearchParams({ mode: "meta" });
+  if (refresh) params.set("refresh", "true");
+  return readApi<WaterMetaResponse>(`/api/water-levels?${params}`);
 }
 
 export async function fetchWaterOverview(
   date: string,
-  latestOnly = false
+  latestOnly = false,
+  refresh = false
 ): Promise<WaterOverviewResponse> {
   const params = new URLSearchParams();
   if (date) params.set("date", date);
   if (latestOnly) params.set("latestOnly", "true");
+  if (refresh) params.set("refresh", "true");
   const q = params.toString();
   return readApi<WaterOverviewResponse>(
     `/api/water-levels${q ? `?${q}` : ""}`

@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { appConfig } from "@/lib/config";
 import {
+  getDamsDataMeta,
   getDamsDataset,
   getReadingsForDam,
   getSnapshotsForDate,
   getTrendSummary,
   getWaterOverview,
 } from "@/lib/dams-data";
+import { invalidateDamsSheetsCache } from "@/lib/dams-sheets";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -24,14 +26,20 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const mode = url.searchParams.get("mode") ?? "overview";
+    const refresh = url.searchParams.get("refresh") === "true";
+
+    if (refresh) {
+      invalidateDamsSheetsCache();
+    }
 
     if (mode === "meta") {
-      const dataset = getDamsDataset();
+      const dataset = await getDamsDataset();
       return NextResponse.json(
         {
           dams: dataset.dams,
           dates: dataset.dates,
           latestDate: dataset.latestDate,
+          ...getDamsDataMeta(),
         },
         { headers: noStore }
       );
@@ -47,10 +55,10 @@ export async function GET(request: Request) {
       }
       const from = url.searchParams.get("from") ?? undefined;
       const to = url.searchParams.get("to") ?? undefined;
-      const readings = getReadingsForDam(location, from, to);
+      const readings = await getReadingsForDam(location, from, to);
       const trend =
         from && to
-          ? getTrendSummary(location, from, to)
+          ? await getTrendSummary(location, from, to)
           : undefined;
       return NextResponse.json(
         { location, from, to, readings, trend },
@@ -60,12 +68,13 @@ export async function GET(request: Request) {
 
     const date = url.searchParams.get("date") ?? "";
     const latestOnly = url.searchParams.get("latestOnly") === "true";
-    const payload = getWaterOverview(date, latestOnly);
+    const payload = await getWaterOverview(date, latestOnly);
 
     logger.info("Water levels served", {
       date: payload.date,
       count: payload.snapshots.length,
       latestOnly,
+      source: getDamsDataMeta().source,
     });
 
     return NextResponse.json(payload, { headers: noStore });

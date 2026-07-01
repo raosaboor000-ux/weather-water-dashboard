@@ -108,3 +108,46 @@ export function weatherLineChartOptions(
     },
   };
 }
+
+export function waterDualAxisChartOptions(
+  opts: { axisPadding?: boolean } = {}
+): ChartOptions<"line"> {
+  const base = weatherLineChartOptions({
+    legendPosition: "top",
+    axisPadding: opts.axisPadding ?? true,
+  });
+  return {
+    ...base,
+    scales: {
+      x: base.scales?.x,
+      y: {
+        ...(typeof base.scales?.y === "object" ? base.scales.y : {}),
+        position: "left",
+        title: {
+          display: true,
+          text: "Water level (ft)",
+          color: C.tick,
+          font: { size: 11, weight: 500 },
+        },
+      },
+      y1: {
+        position: "right",
+        min: 0,
+        max: 100,
+        grid: { drawOnChartArea: false, color: C.grid },
+        ticks: {
+          color: C.violet,
+          font: { size: 12 },
+          callback: (v) => `${v}%`,
+        },
+        border: { display: false },
+        title: {
+          display: true,
+          text: "Capacity (%)",
+          color: C.violet,
+          font: { size: 11, weight: 500 },
+        },
+      },
+    },
+  };
+}

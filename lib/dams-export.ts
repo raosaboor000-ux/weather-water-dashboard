@@ -1,7 +1,8 @@
 import type { DamSnapshot } from "@/lib/dams-types";
 import {
+  calculatedStorageAft,
+  displayStatusLabel,
   spillStatusLabel,
-  storageStatusLabel,
   trendLabel,
 } from "@/lib/dams-status";
 import { formatDamDateLabel } from "@/lib/dams-format";
@@ -18,25 +19,32 @@ export function snapshotsToCsv(rows: DamSnapshot[]): string {
     "Date",
     "Dam",
     "Water Level (ft)",
+    "DSL (ft)",
+    "NPL (ft)",
     "Fill %",
-    "Storage Status",
+    "Calc. Storage (Aft)",
+    "Status",
     "Spill Status",
     "7-day Trend",
   ].join(",");
 
-  const lines = rows.map((s) =>
-    [
+  const lines = rows.map((s) => {
+    const storageAft = calculatedStorageAft(s.liveStorageAft, s.fillPct);
+    return [
       formatDamDateLabel(s.date),
       s.location,
       s.waterLevelFt.toFixed(1),
+      s.dslFt?.toFixed(1) ?? "",
+      s.nplFt?.toFixed(1) ?? "",
       s.fillPct != null ? s.fillPct.toFixed(1) : "",
-      storageStatusLabel(s.storageStatus),
+      storageAft != null ? storageAft.toFixed(0) : "",
+      displayStatusLabel(s),
       s.spillStatus !== "none" ? spillStatusLabel(s.spillStatus) : "",
       trendLabel(s.trend7d),
     ]
       .map(csvEscape)
-      .join(",")
-  );
+      .join(",");
+  });
 
   return [header, ...lines].join("\n") + "\n";
 }

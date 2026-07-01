@@ -35,20 +35,23 @@ export function DamMap({ snapshots, highlightLocation, onSelect }: Props) {
       />
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-ink-muted">
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-[#eab308]" /> Below dead level
+          <span className="h-3 w-3 rounded-full bg-[#3b82f6]" /> Spilling / spill
+          watch
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-[#ef4444]" /> Low storage
+          <span className="h-3 w-3 rounded-full bg-[#22c55e]" /> High (&gt;75%)
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-[#f97316]" /> Medium storage
+          <span className="h-3 w-3 rounded-full bg-[#eab308]" /> Medium (50–75%)
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-[#22c55e]" /> High storage
+          <span className="h-3 w-3 rounded-full bg-[#f97316]" /> Low (25–50%)
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-[#3b82f6]" /> Spill watch /
-          anytime / spilling
+          <span className="h-3 w-3 rounded-full bg-[#ef4444]" /> Very low (&lt;25%)
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-3 w-3 rounded-full bg-[#a855f7]" /> Below DSL
         </span>
       </div>
     </div>

@@ -227,6 +227,136 @@ export function latestPerDam(
   return map;
 }
 
+export type CapacityBand =
+  | "below_dead"
+  | "very_low"
+  | "low"
+  | "medium"
+  | "high";
+
+export type TableStatusFilter =
+  | "all"
+  | "spilling"
+  | "spill_watch"
+  | "high"
+  | "medium"
+  | "low"
+  | "very_low"
+  | "below_dead";
+
+export function calculatedStorageAft(
+  liveStorageAft?: number,
+  fillPctValue?: number | null
+): number | null {
+  if (liveStorageAft == null || fillPctValue == null) return null;
+  return (liveStorageAft * fillPctValue) / 100;
+}
+
+export function capacityBand(
+  level: number,
+  dsl?: number,
+  npl?: number,
+  fillPctValue?: number | null
+): CapacityBand {
+  if (dsl != null && level < dsl) return "below_dead";
+  const pct = fillPctValue ?? fillPct(level, dsl, npl);
+  if (pct == null) return "low";
+  if (pct < 25) return "very_low";
+  if (pct < 50) return "low";
+  if (pct < 75) return "medium";
+  return "high";
+}
+
+export function capacityBandLabel(band: CapacityBand): string {
+  switch (band) {
+    case "below_dead":
+      return "Below DSL";
+    case "very_low":
+      return "Very Low Storage";
+    case "low":
+      return "Low Storage";
+    case "medium":
+      return "Medium Storage";
+    case "high":
+      return "High Storage";
+  }
+}
+
+export function capacityBandColor(band: CapacityBand): string {
+  switch (band) {
+    case "below_dead":
+      return "#a855f7";
+    case "very_low":
+      return "#ef4444";
+    case "low":
+      return "#f97316";
+    case "medium":
+      return "#eab308";
+    case "high":
+      return "#22c55e";
+  }
+}
+
+export function snapshotCapacityBand(s: DamSnapshot): CapacityBand {
+  return capacityBand(s.waterLevelFt, s.dslFt, s.nplFt, s.fillPct);
+}
+
+export function displayStatusLabel(s: DamSnapshot): string {
+  if (s.spillStatus === "spilling") return "Spilling";
+  if (s.spillStatus === "anytime") return "Spill Anytime";
+  if (s.spillStatus === "watch") return "Spill Watch";
+  return capacityBandLabel(snapshotCapacityBand(s));
+}
+
+export function matchesTableFilter(
+  s: DamSnapshot,
+  filter: TableStatusFilter
+): boolean {
+  if (filter === "all") return true;
+  if (filter === "spilling") return s.spillStatus === "spilling";
+  if (filter === "spill_watch")
+    return s.spillStatus === "watch" || s.spillStatus === "anytime";
+  if (filter === "below_dead") return s.storageStatus === "below_dead";
+  const band = snapshotCapacityBand(s);
+  if (filter === "very_low") return band === "very_low";
+  if (filter === "low") return band === "low";
+  if (filter === "medium") return band === "medium";
+  if (filter === "high") return band === "high";
+  return true;
+}
+
+export type WaterKpis = {
+  totalMonitored: number;
+  totalLiveStorageAft: number;
+  avgFillPct: number | null;
+  spillAlertCount: number;
+  belowDeadCount: number;
+};
+
+export function aggregateKpis(snaps: DamSnapshot[]): WaterKpis {
+  const withFill = snaps.filter((s) => s.fillPct != null);
+  const totalLiveStorageAft = snaps.reduce((sum, s) => {
+    const aft = calculatedStorageAft(s.liveStorageAft, s.fillPct);
+    return sum + (aft ?? 0);
+  }, 0);
+  const avgFillPct =
+    withFill.length > 0
+      ? withFill.reduce((sum, s) => sum + (s.fillPct ?? 0), 0) / withFill.length
+      : null;
+  const spillAlertCount = snaps.filter((s) => s.spillStatus !== "none").length;
+  const belowDeadCount = snaps.filter(
+    (s) => s.storageStatus === "below_dead"
+  ).length;
+
+  return {
+    totalMonitored: snaps.length,
+    totalLiveStorageAft,
+    avgFillPct,
+    spillAlertCount,
+    belowDeadCount,
+  };
+}
+
 export function overviewFromSnapshots(snaps: DamSnapshot[]) {
   const withFill = snaps.filter((s) => s.fillPct != null);
   const maxStorage =
@@ -240,7 +370,13 @@ export function overviewFromSnapshots(snaps: DamSnapshot[]) {
   const belowDead = snaps.filter((s) => s.storageStatus === "below_dead");
   const spillAlerts = snaps.filter((s) => s.spillStatus !== "none");
 
-  return { maxStorage, lowestStorage, belowDead, spillAlerts };
+  return {
+    maxStorage,
+    lowestStorage,
+    belowDead,
+    spillAlerts,
+    kpis: aggregateKpis(snaps),
+  };
 }
 
 export function trendOverRange(

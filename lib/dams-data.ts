@@ -1,23 +1,56 @@
 import { appConfig } from "@/lib/config";
 import { loadDamsDataset } from "@/lib/dams-csv";
 import {
+  damsSheetsMeta,
+  isDamsSheetsConfigured,
+  loadDamsDatasetFromSheets,
+} from "@/lib/dams-sheets";
+import {
   buildSnapshots,
   buildSnapshotsLatestPerDam,
   latestPerDam,
   overviewFromSnapshots,
   trendOverRange,
 } from "@/lib/dams-status";
+import { logger } from "@/lib/logger";
 import type { DamReading, DamSnapshot, DamsDataset } from "@/lib/dams-types";
 
-export function getDamsDataset(): DamsDataset {
+export async function getDamsDataset(): Promise<DamsDataset> {
+  if (isDamsSheetsConfigured()) {
+    try {
+      return await loadDamsDatasetFromSheets();
+    } catch (err) {
+      logger.error("Dams Google Sheet load failed — falling back to CSV", {
+        err: String(err),
+      });
+    }
+  }
+
   return loadDamsDataset(appConfig.waterLevels.csvPath);
 }
 
-export function getSnapshotsForDate(
+export function getDamsDataSource(): "google_sheets" | "csv" {
+  return isDamsSheetsConfigured() ? "google_sheets" : "csv";
+}
+
+export function getDamsDataMeta() {
+  if (isDamsSheetsConfigured()) {
+    return {
+      source: "google_sheets" as const,
+      ...damsSheetsMeta(),
+    };
+  }
+  return {
+    source: "csv" as const,
+    csvPath: appConfig.waterLevels.csvPath,
+  };
+}
+
+export async function getSnapshotsForDate(
   date: string,
   latestOnly = false
-): { date: string; snapshots: DamSnapshot[]; latestOnly: boolean } {
-  const dataset = getDamsDataset();
+): Promise<{ date: string; snapshots: DamSnapshot[]; latestOnly: boolean }> {
+  const dataset = await getDamsDataset();
 
   if (latestOnly) {
     const snapshots = buildSnapshotsLatestPerDam(dataset.dams, dataset.readings);
@@ -34,12 +67,12 @@ export function getSnapshotsForDate(
   return { date: effectiveDate, snapshots, latestOnly: false };
 }
 
-export function getReadingsForDam(
+export async function getReadingsForDam(
   location: string,
   from?: string,
   to?: string
-): DamReading[] {
-  const { readings } = getDamsDataset();
+): Promise<DamReading[]> {
+  const { readings } = await getDamsDataset();
   return readings
     .filter((r) => {
       if (r.location !== location) return false;
@@ -50,8 +83,8 @@ export function getReadingsForDam(
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
-export function getWaterOverview(date: string, latestOnly = false) {
-  const { date: effectiveDate, snapshots } = getSnapshotsForDate(
+export async function getWaterOverview(date: string, latestOnly = false) {
+  const { date: effectiveDate, snapshots } = await getSnapshotsForDate(
     date,
     latestOnly
   );
@@ -62,12 +95,12 @@ export function getWaterOverview(date: string, latestOnly = false) {
   };
 }
 
-export function getTrendSummary(
+export async function getTrendSummary(
   location: string,
   from: string,
   to: string
 ) {
-  const { readings } = getDamsDataset();
+  const { readings } = await getDamsDataset();
   return trendOverRange(readings, location, from, to);
 }
 

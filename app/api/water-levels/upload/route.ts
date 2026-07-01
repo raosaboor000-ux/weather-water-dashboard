@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { appConfig } from "@/lib/config";
+import { getDamsDataSource } from "@/lib/dams-data";
 import { DAMS_CSV_HEADER, importDamsCsvContent } from "@/lib/dams-csv";
 import { logger } from "@/lib/logger";
 
@@ -12,6 +13,16 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Water levels are disabled" },
       { status: 503, headers: noStore }
+    );
+  }
+
+  if (getDamsDataSource() === "google_sheets") {
+    return NextResponse.json(
+      {
+        error:
+          "Dam data is loaded from Google Sheets. Update the spreadsheet directly — CSV upload is disabled.",
+      },
+      { status: 400, headers: noStore }
     );
   }
 

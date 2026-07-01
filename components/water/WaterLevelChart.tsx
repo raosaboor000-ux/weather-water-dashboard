@@ -11,11 +11,11 @@ import {
   PointElement,
   Tooltip,
 } from "chart.js";
-import type { DamReading } from "@/lib/dams-types";
-import { trendLabel } from "@/lib/dams-status";
+import type { DamMetadata, DamReading } from "@/lib/dams-types";
+import { fillPct, trendLabel } from "@/lib/dams-status";
 import type { TrendDirection } from "@/lib/dams-types";
 import { formatDamDateLabel } from "@/lib/dams-format";
-import { C, weatherLineChartOptions } from "@/lib/chart-theme";
+import { C, waterDualAxisChartOptions } from "@/lib/chart-theme";
 import { ChartPanel } from "@/components/charts/ChartPanel";
 import { DamSelect } from "@/components/water/DamSelect";
 
@@ -33,6 +33,7 @@ type Props = {
   location: string;
   onLocationChange: (name: string) => void;
   readings: DamReading[];
+  damMeta?: DamMetadata;
   trend?: TrendDirection;
   from: string;
   to: string;
@@ -47,6 +48,7 @@ export function WaterLevelChart({
   location,
   onLocationChange,
   readings,
+  damMeta,
   trend,
   from,
   to,
@@ -58,25 +60,41 @@ export function WaterLevelChart({
   const chart = useMemo(() => {
     const labels = readings.map((r) => formatDamDateLabel(r.date));
     const levels = readings.map((r) => r.waterLevelFt);
+    const capacities = readings.map((r) => {
+      const pct = fillPct(r.waterLevelFt, damMeta?.dslFt, damMeta?.nplFt);
+      return pct ?? null;
+    });
+
     return {
       labels,
       datasets: [
         {
           label: "Water level (ft)",
           data: levels,
+          yAxisID: "y",
           borderColor: C.sky,
           backgroundColor: "rgba(14, 165, 233, 0.12)",
           fill: true,
           tension: 0.3,
         },
+        {
+          label: "Capacity (%)",
+          data: capacities,
+          yAxisID: "y1",
+          borderColor: C.violet,
+          backgroundColor: "rgba(139, 92, 246, 0.08)",
+          fill: false,
+          tension: 0.3,
+          spanGaps: true,
+        },
       ],
     };
-  }, [readings]);
+  }, [readings, damMeta]);
 
   return (
     <div className="mb-8">
       <h2 className="mb-3 font-display text-lg font-semibold text-ink">
-        Water level trend (custom range)
+        Water level &amp; storage trends
       </h2>
 
       <div className="mb-3 flex flex-wrap items-end gap-3">
@@ -115,15 +133,12 @@ export function WaterLevelChart({
         )}
       </div>
 
-      <ChartPanel clip={false} className="h-[340px]">
-        <div className="h-full min-h-[300px]">
+      <ChartPanel clip={false} className="h-[360px]">
+        <div className="h-full min-h-[320px]">
           {readings.length > 0 ? (
             <Line
               data={chart}
-              options={weatherLineChartOptions({
-                legendPosition: "top",
-                axisPadding: true,
-              })}
+              options={waterDualAxisChartOptions({ axisPadding: true })}
             />
           ) : (
             <p className="flex h-full items-center justify-center text-sm text-ink-subtle">

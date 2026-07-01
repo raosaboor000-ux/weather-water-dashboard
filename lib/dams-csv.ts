@@ -34,16 +34,20 @@ function num(v: string | undefined): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-/** D/M/YYYY → YYYY-MM-DD */
+/** D/M/YYYY or YYYY-MM-DD → YYYY-MM-DD */
 export function parseDamDate(raw: string): string | null {
   const t = raw.trim();
-  const m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (!m) return null;
-  const d = Number(m[1]);
-  const mo = Number(m[2]);
-  const y = Number(m[3]);
-  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
-  return `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const slash = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slash) {
+    const d = Number(slash[1]);
+    const mo = Number(slash[2]);
+    const y = Number(slash[3]);
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+    return `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  }
+  const iso = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return t;
+  return null;
 }
 
 function rowToMetadata(cells: string[]): Partial<DamMetadata> {
@@ -236,26 +240,32 @@ export function importDamsCsvContent(
   return { merged, rowsAdded, rowsUpdated };
 }
 
-export function parseDamsCsv(content: string): DamsDataset {
-  const lines = content.split(/\r?\n/).filter((l) => l.trim());
-  if (lines.length < 2) {
+export function parseDamsSheetValues(values: string[][]): DamsDataset {
+  if (values.length < 2) {
     return { dams: [], readings: [], dates: [], latestDate: "" };
   }
 
+  let start = 0;
+  const first = values[0]?.[0]?.toLowerCase() ?? "";
+  if (first.includes("date")) start = 1;
+
+  return parseDamsDataRows(values.slice(start));
+}
+
+function parseDamsDataRows(rows: string[][]): DamsDataset {
   const metaByLocation = new Map<string, DamMetadata>();
   const readings: DamReading[] = [];
   const dateSet = new Set<string>();
 
-  for (let i = 1; i < lines.length; i++) {
-    const cells = parseCsvLine(lines[i]);
+  for (const cells of rows) {
     if (cells.length < 3) continue;
 
-    const date = parseDamDate(cells[0]);
-    const location = cells[1]?.trim();
-    const waterLevelFt = num(cells[2]);
+    const date = parseDamDate(String(cells[0] ?? ""));
+    const location = String(cells[1] ?? "").trim();
+    const waterLevelFt = num(String(cells[2] ?? ""));
     if (!date || !location || waterLevelFt == null) continue;
 
-    const patch = rowToMetadata(cells);
+    const patch = rowToMetadata(cells.map(String));
     const existing = metaByLocation.get(location) ?? { location };
     metaByLocation.set(location, mergeMeta(existing, patch));
 
@@ -274,6 +284,20 @@ export function parseDamsCsv(content: string): DamsDataset {
     dates,
     latestDate,
   };
+}
+
+export function parseDamsCsv(content: string): DamsDataset {
+  const lines = content.split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) {
+    return { dams: [], readings: [], dates: [], latestDate: "" };
+  }
+
+  const rows = lines.map(parseCsvLine);
+  let start = 1;
+  const first = rows[0]?.[0]?.toLowerCase() ?? "";
+  if (!first.includes("date")) start = 0;
+
+  return parseDamsDataRows(rows.slice(start));
 }
 
 let cached: DamsDataset | null = null;

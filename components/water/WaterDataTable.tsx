@@ -4,9 +4,14 @@ import { useMemo, useState } from "react";
 import { Download } from "lucide-react";
 import type { DamSnapshot } from "@/lib/dams-types";
 import {
+  calculatedStorageAft,
+  capacityBandColor,
+  displayStatusLabel,
+  matchesTableFilter,
+  snapshotCapacityBand,
   spillStatusLabel,
-  storageStatusLabel,
   trendLabel,
+  type TableStatusFilter,
 } from "@/lib/dams-status";
 import { downloadCsv, snapshotsToCsv } from "@/lib/dams-export";
 import { formatDamDateLabel } from "@/lib/dams-format";
@@ -15,14 +20,46 @@ type Props = {
   snapshots: DamSnapshot[];
 };
 
+const FILTERS: { id: TableStatusFilter; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "spilling", label: "Spilling" },
+  { id: "spill_watch", label: "Spill watch" },
+  { id: "high", label: "High" },
+  { id: "medium", label: "Medium" },
+  { id: "low", label: "Low" },
+  { id: "very_low", label: "Very low" },
+  { id: "below_dead", label: "Below DSL" },
+];
+
+function StatusPill({ snapshot }: { snapshot: DamSnapshot }) {
+  const band = snapshotCapacityBand(snapshot);
+  const color =
+    snapshot.spillStatus !== "none"
+      ? "#3b82f6"
+      : capacityBandColor(band);
+
+  return (
+    <span
+      className="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold text-white"
+      style={{ backgroundColor: color }}
+    >
+      {displayStatusLabel(snapshot)}
+    </span>
+  );
+}
+
 export function WaterDataTable({ snapshots }: Props) {
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<TableStatusFilter>("all");
 
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return snapshots;
-    return snapshots.filter((s) => s.location.toLowerCase().includes(q));
-  }, [snapshots, search]);
+    return snapshots.filter((s) => {
+      if (!matchesTableFilter(s, statusFilter)) return false;
+      if (!q) return true;
+      return s.location.toLowerCase().includes(q);
+    });
+  }, [snapshots, search, statusFilter]);
 
   const onExport = () => {
     const stamp = new Date().toISOString().slice(0, 10);
@@ -33,10 +70,11 @@ export function WaterDataTable({ snapshots }: Props) {
     <div className="mb-8">
       <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-semibold text-ink">Data</h2>
+          <h2 className="font-display text-lg font-semibold text-ink">
+            Dams status table
+          </h2>
           <p className="mt-1 text-xs text-ink-faint">
-            Trend (in the table) is based on the last 7 days of water levels for
-            each dam.
+            Latest record per selection · filter by storage or spill status
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-2">
@@ -62,51 +100,91 @@ export function WaterDataTable({ snapshots }: Props) {
         </div>
       </div>
 
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {FILTERS.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setStatusFilter(id)}
+            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+              statusFilter === id
+                ? "bg-brand-primary text-white shadow-sm"
+                : "border border-slate-200 bg-white text-ink-muted hover:border-brand-primary/40"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-card">
-        <table className="min-w-[960px] w-full text-sm">
+        <table className="min-w-[1100px] w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs font-semibold uppercase text-ink-subtle">
             <tr>
-              <th className="px-3 py-2">Date</th>
-              <th className="px-3 py-2">Dam</th>
-              <th className="px-3 py-2">Level (ft)</th>
-              <th className="px-3 py-2">Fill %</th>
-              <th className="px-3 py-2">Storage</th>
+              <th className="px-3 py-2">Location</th>
+              <th className="px-3 py-2">Water level (ft)</th>
+              <th className="px-3 py-2">DSL (ft)</th>
+              <th className="px-3 py-2">NPL (ft)</th>
+              <th className="px-3 py-2">Capacity %</th>
+              <th className="px-3 py-2">Calc. storage (Aft)</th>
+              <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">Spill</th>
               <th className="px-3 py-2">7-day trend</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((s) => (
-              <tr
-                key={`${s.location}-${s.date}`}
-                className="border-t border-slate-100 even:bg-slate-50/50"
-              >
-                <td className="px-3 py-2 font-mono text-xs text-ink-muted">
-                  {formatDamDateLabel(s.date)}
-                </td>
-                <td className="px-3 py-2 font-medium text-ink">{s.location}</td>
-                <td className="px-3 py-2 tabular-nums">
-                  {s.waterLevelFt.toFixed(1)}
-                </td>
-                <td className="px-3 py-2 tabular-nums">
-                  {s.fillPct != null ? `${s.fillPct.toFixed(1)}%` : "—"}
-                </td>
-                <td className="px-3 py-2">
-                  {storageStatusLabel(s.storageStatus)}
-                </td>
-                <td className="px-3 py-2">
-                  {s.spillStatus !== "none"
-                    ? spillStatusLabel(s.spillStatus)
-                    : "—"}
-                </td>
-                <td className="px-3 py-2">{trendLabel(s.trend7d)}</td>
-              </tr>
-            ))}
+            {rows.map((s) => {
+              const storageAft = calculatedStorageAft(
+                s.liveStorageAft,
+                s.fillPct
+              );
+              return (
+                <tr
+                  key={`${s.location}-${s.date}`}
+                  className="border-t border-slate-100 even:bg-slate-50/50"
+                >
+                  <td className="px-3 py-2 font-medium text-ink">
+                    {s.location}
+                    <span className="mt-0.5 block font-mono text-[10px] font-normal text-ink-muted">
+                      {formatDamDateLabel(s.date)}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 tabular-nums">
+                    {s.waterLevelFt.toFixed(1)}
+                  </td>
+                  <td className="px-3 py-2 tabular-nums text-ink-muted">
+                    {s.dslFt?.toFixed(1) ?? "—"}
+                  </td>
+                  <td className="px-3 py-2 tabular-nums text-ink-muted">
+                    {s.nplFt?.toFixed(1) ?? "—"}
+                  </td>
+                  <td className="px-3 py-2 tabular-nums">
+                    {s.fillPct != null ? `${s.fillPct.toFixed(1)}%` : "—"}
+                  </td>
+                  <td className="px-3 py-2 tabular-nums">
+                    {storageAft != null
+                      ? storageAft.toLocaleString(undefined, {
+                          maximumFractionDigits: 0,
+                        })
+                      : "—"}
+                  </td>
+                  <td className="px-3 py-2">
+                    <StatusPill snapshot={s} />
+                  </td>
+                  <td className="px-3 py-2 text-ink-muted">
+                    {s.spillStatus !== "none"
+                      ? spillStatusLabel(s.spillStatus)
+                      : "—"}
+                  </td>
+                  <td className="px-3 py-2">{trendLabel(s.trend7d)}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         {rows.length === 0 && (
           <p className="p-6 text-center text-sm text-ink-subtle">
-            No dams match your search.
+            No dams match your filters.
           </p>
         )}
       </div>

@@ -4,9 +4,10 @@ import { useMemo } from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
 import type { DamSnapshot } from "@/lib/dams-types";
 import {
+  capacityBandColor,
   spillStatusColor,
   spillStatusLabel,
-  storageStatusColor,
+  snapshotCapacityBand,
   storageStatusLabel,
 } from "@/lib/dams-status";
 import "leaflet/dist/leaflet.css";
@@ -19,7 +20,7 @@ type Props = {
 
 function markerColor(s: DamSnapshot): string {
   if (s.spillStatus !== "none") return spillStatusColor(s.spillStatus);
-  return storageStatusColor(s.storageStatus);
+  return capacityBandColor(snapshotCapacityBand(s));
 }
 
 function markerRadius(s: DamSnapshot, active: boolean): number {
