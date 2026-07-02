@@ -19,6 +19,7 @@ import {
   headerRow,
   parseRowsFromValues,
   sheetRowToHistory,
+  weatherHistoryToSheetCells,
   weatherLatestToSheetCells,
 } from "@/lib/sheet-rows";
 import type { SheetObservationRow, StorageResult } from "@/lib/sheet-types";
@@ -26,7 +27,18 @@ import type { WeatherHistoryRow, WeatherLatest } from "@/lib/types";
 
 import type { sheets_v4 } from "googleapis";
 
-type SheetsApi = sheets_v4.Sheets | null;
+const APPEND_BATCH_SIZE = 100;
+
+function existingTimestampSet(values: string[][]): Set<string> {
+  const headerOffset =
+    values[0]?.[0]?.toLowerCase().includes("timestamp") ? 1 : 0;
+  const set = new Set<string>();
+  for (let i = headerOffset; i < values.length; i++) {
+    const iso = (values[i]?.[0] ?? "").trim();
+    if (iso) set.add(iso);
+  }
+  return set;
+}
 
 async function resolveSheetRange(sheets: sheets_v4.Sheets) {
   const spreadsheetId = appConfig.googleSheets.spreadsheetId || DEFAULT_SPREADSHEET_ID;
@@ -78,6 +90,97 @@ export class GoogleSheetsStorage {
     if (!appConfig.googleSheets.enabled) return false;
     if (!this.spreadsheetId) return false;
     return Boolean(loadServiceAccountJson());
+  }
+
+  /**
+   * Append any API rows whose timestamps are not already in the sheet.
+   */
+  async syncMissingRows(apiRows: WeatherHistoryRow[]): Promise<StorageResult> {
+    if (!this.isConfigured()) {
+      return {
+        success: false,
+        message: "Google Sheets not configured.",
+        rowsAffected: 0,
+      };
+    }
+
+    const sheets = await getSheetsClient();
+    if (!sheets) {
+      return {
+        success: false,
+        message: "Could not authenticate with Google Sheets.",
+        rowsAffected: 0,
+      };
+    }
+
+    try {
+      const { spreadsheetId, dataRange, appendAnchor } =
+        await resolveSheetRange(sheets);
+
+      const existing = await sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: dataRange,
+      });
+      const values = (existing.data.values ?? []) as string[][];
+      const known = existingTimestampSet(values);
+
+      const missing = apiRows
+        .filter((r) => r.timestampIso?.trim() && !known.has(r.timestampIso.trim()))
+        .sort(
+          (a, b) =>
+            new Date(a.timestampIso).getTime() -
+            new Date(b.timestampIso).getTime()
+        );
+
+      if (missing.length === 0) {
+        return {
+          success: true,
+          message: "Sheet already up to date.",
+          rowsAffected: 0,
+        };
+      }
+
+      const sheetRows = missing.map(weatherHistoryToSheetCells);
+
+      if (values.length === 0) {
+        await sheets.spreadsheets.values.update({
+          spreadsheetId,
+          range: appendAnchor,
+          valueInputOption: "USER_ENTERED",
+          requestBody: { values: [headerRow(), ...sheetRows] },
+        });
+      } else {
+        for (let i = 0; i < sheetRows.length; i += APPEND_BATCH_SIZE) {
+          const batch = sheetRows.slice(i, i + APPEND_BATCH_SIZE);
+          await sheets.spreadsheets.values.append({
+            spreadsheetId,
+            range: appendAnchor,
+            valueInputOption: "USER_ENTERED",
+            insertDataOption: "INSERT_ROWS",
+            requestBody: { values: batch },
+          });
+        }
+      }
+
+      logger.info("Sheet catch-up complete", {
+        spreadsheetId,
+        rowsAdded: missing.length,
+      });
+
+      return {
+        success: true,
+        message: `Synced ${missing.length} missing observation(s).`,
+        rowsAffected: missing.length,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error("syncMissingRows failed", { error: message });
+      return {
+        success: false,
+        message: `Google Sheets sync failed: ${message}`,
+        rowsAffected: 0,
+      };
+    }
   }
 
   /**

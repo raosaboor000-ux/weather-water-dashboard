@@ -80,11 +80,12 @@ export default async function SettingsPage() {
           {!sheetStatus.configured ? (
             <p className="mt-4 text-xs leading-relaxed text-ink-subtle">
               Share the spreadsheet with the service account email above (Editor
-              access), and place credentials at{" "}
+              access), and set{" "}
               <code className="rounded bg-slate-100 px-1">
-                GOOGLE_SERVICE_ACCOUNT_JSON_PATH
-              </code>
-              .
+                GOOGLE_SERVICE_ACCOUNT_JSON
+              </code>{" "}
+              to the full service account JSON (single line in{" "}
+              <code className="rounded bg-slate-100 px-1">.env.local</code>).
             </p>
           ) : null}
         </Card>

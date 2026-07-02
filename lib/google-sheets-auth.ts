@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { isAbsolute, resolve } from "node:path";
 import { appConfig } from "@/lib/config";
 import { logger } from "@/lib/logger";
 
@@ -8,26 +6,8 @@ import type { sheets_v4 } from "googleapis";
 let warnedMissingCredentials = false;
 
 export function loadServiceAccountJson(): string | null {
-  const inline = process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim();
-  if (inline) return inline;
-
-  const filePath =
-    process.env.GOOGLE_SERVICE_ACCOUNT_JSON_PATH?.trim() ||
-    appConfig.googleSheets.credentialsPath?.trim();
-  if (!filePath) return null;
-
-  try {
-    const resolved = isAbsolute(filePath)
-      ? filePath
-      : resolve(process.cwd(), filePath);
-    return readFileSync(resolved, "utf8");
-  } catch (err) {
-    logger.error("Failed to read Google credentials file", {
-      filePath,
-      err: String(err),
-    });
-    return null;
-  }
+  const json = appConfig.googleSheets.serviceAccountJson?.trim();
+  return json || null;
 }
 
 export function isGoogleSheetsConfigured(): boolean {
@@ -41,7 +21,7 @@ export async function getSheetsClient(): Promise<sheets_v4.Sheets | null> {
     if (!warnedMissingCredentials) {
       warnedMissingCredentials = true;
       logger.warn(
-        "Google Sheets disabled — set GOOGLE_SERVICE_ACCOUNT_JSON_PATH or GOOGLE_SERVICE_ACCOUNT_JSON"
+        "Google Sheets disabled — set GOOGLE_SERVICE_ACCOUNT_JSON in environment variables"
       );
     }
     return null;

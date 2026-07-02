@@ -44,7 +44,10 @@ export function WaterLevelsPage() {
 
   const latestDate = metaQuery.data?.latestDate ?? "";
   const dates = metaQuery.data?.dates ?? [];
-  const damNames = metaQuery.data?.dams.map((d) => d.location) ?? [];
+  const damNames = useMemo(
+    () => metaQuery.data?.dams.map((d) => d.location) ?? [],
+    [metaQuery.data?.dams]
+  );
   const damMetaByName = useMemo(
     () => new Map(metaQuery.data?.dams.map((d) => [d.location, d]) ?? []),
     [metaQuery.data?.dams]

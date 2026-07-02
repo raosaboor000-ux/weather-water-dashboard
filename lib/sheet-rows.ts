@@ -18,6 +18,25 @@ export function stationTimeLabelFromIso(iso: string): string {
   });
 }
 
+export function weatherHistoryToSheetCells(r: WeatherHistoryRow): string[] {
+  return [
+    r.timestampIso,
+    r.dateLocal ?? stationYmdFromIso(r.timestampIso),
+    r.timeLocal ?? stationTimeLabelFromIso(r.timestampIso),
+    r.temperature,
+    r.dewPoint,
+    r.humidity,
+    r.wind,
+    r.speed,
+    r.gust,
+    r.pressure,
+    r.uv,
+    r.solar,
+    r.precipRate ?? "",
+    r.precipTotal ?? "",
+  ];
+}
+
 export function weatherLatestToSheetCells(w: WeatherLatest): string[] {
   const iso = w.lastUpdated;
   return [

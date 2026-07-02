@@ -226,8 +226,6 @@ function mapToLatest(o: Observation, dailyHigh?: number, dailyLow?: number): Wea
   const row = mapObservation(o);
   const m = normalizeMetric(o)!;
 
-  const lat = typeof o.lat === "number" ? o.lat : appConfig.station.lat;
-  const lng = typeof o.lon === "number" ? o.lon : appConfig.station.lng;
   const updated = o.obsTimeUtc ?? new Date().toISOString();
   const ageMs = Date.now() - new Date(updated).getTime();
   const online = !Number.isNaN(ageMs) && ageMs < 20 * 60 * 1000;
@@ -270,7 +268,10 @@ function buildUrl(path: string): string {
   return `${appConfig.api.wuBaseUrl}/${path}?${params.toString()}`;
 }
 
-async function fetchObservations(path: string): Promise<Observation[]> {
+async function fetchObservations(
+  path: string,
+  opts: { optional?: boolean } = {}
+): Promise<Observation[]> {
   const url = buildUrl(path);
   logger.info("WU API request", { path, stationId: appConfig.station.id });
 
@@ -279,11 +280,13 @@ async function fetchObservations(path: string): Promise<Observation[]> {
     res = await fetch(url, { cache: "no-store" });
   } catch (err) {
     logger.error("WU API network error", { path, error: String(err) });
+    if (opts.optional) return [];
     throw new Error("Network error — unable to reach Weather Underground.");
   }
 
   if (res.status === 429) {
     logger.warn("WU API rate limit", { path });
+    if (opts.optional) return [];
     throw new Error("Rate limit exceeded — please try again shortly.");
   }
 
@@ -292,9 +295,20 @@ async function fetchObservations(path: string): Promise<Observation[]> {
     return [];
   }
 
+  if (res.status === 401 || res.status === 403) {
+    logger.warn("WU API access denied for endpoint", {
+      path,
+      stationId: appConfig.station.id,
+      status: res.status,
+    });
+    if (opts.optional) return [];
+    throw new Error(`Weather API access denied (HTTP ${res.status}).`);
+  }
+
   if (!res.ok) {
     const text = await res.text();
     logger.error("WU API HTTP error", { path, status: res.status, body: text.slice(0, 200) });
+    if (opts.optional) return [];
     throw new Error(`Weather API error (HTTP ${res.status}).`);
   }
 
@@ -346,8 +360,11 @@ export class WeatherAPI {
   }
 
   async getHourly(): Promise<WeatherHistoryRow[]> {
-    const list = await fetchObservations("observations/hourly/1day");
-    return this._mapHistory(list);
+    const hourly = await fetchObservations("observations/hourly/1day", {
+      optional: true,
+    });
+    if (hourly.length > 0) return this._mapHistory(hourly);
+    return this.getDaily();
   }
 
   async getDaily(): Promise<WeatherHistoryRow[]> {
@@ -355,17 +372,18 @@ export class WeatherAPI {
     return this._mapHistory(list);
   }
 
-  async getHistory(): Promise<WeatherHistoryRow[]> {
-    const [all7d, all1d, hourly] = await Promise.all([
-      fetchObservations("observations/all/7day").catch(() => [] as Observation[]),
-      fetchObservations("observations/all/1day").catch(() => [] as Observation[]),
-      fetchObservations("observations/hourly/7day").catch(() => [] as Observation[]),
+  /**
+   * All readings WU still exposes on your API plan (no 7-day "all" endpoint).
+   * Used to backfill the Google Sheet on each visit.
+   */
+  async getCatchUpHistory(): Promise<WeatherHistoryRow[]> {
+    const [hourly7d, all1d] = await Promise.all([
+      fetchObservations("observations/hourly/7day", { optional: true }),
+      fetchObservations("observations/all/1day", { optional: true }),
     ]);
 
     const map = new Map<string, WeatherHistoryRow>();
-    const source = all7d.length > 0 ? [...all7d, ...all1d] : [...hourly, ...all1d];
-
-    for (const o of source) {
+    for (const o of [...hourly7d, ...all1d]) {
       if (!o.obsTimeUtc) continue;
       try {
         map.set(o.obsTimeUtc, mapObservation(o));
@@ -374,10 +392,7 @@ export class WeatherAPI {
       }
     }
 
-    return Array.from(map.values()).sort(
-      (a, b) =>
-        new Date(b.timestampIso).getTime() - new Date(a.timestampIso).getTime()
-    );
+    return Array.from(map.values());
   }
 
   private _mapHistory(list: Observation[]): WeatherHistoryRow[] {

@@ -31,8 +31,7 @@ type Tab = "graph" | "table";
 
 const SOURCE_LABEL = {
   sheet: "Google Sheets",
-  api: "Weather Underground API",
-  merged: "Google Sheets + API",
+  api: "Weather Underground (today only)",
 } as const;
 
 export function HistoricalWeatherPage() {
@@ -57,7 +56,7 @@ export function HistoricalWeatherPage() {
     placeholderData: keepPreviousData,
   });
 
-  const rows = data?.rows ?? [];
+  const rows = useMemo(() => data?.rows ?? [], [data?.rows]);
   const source = data?.source;
 
   const filtered = useMemo(

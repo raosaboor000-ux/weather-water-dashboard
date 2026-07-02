@@ -20,7 +20,7 @@ export async function getDamsDataset(): Promise<DamsDataset> {
     try {
       return await loadDamsDatasetFromSheets();
     } catch (err) {
-      logger.error("Dams Google Sheet load failed — falling back to CSV", {
+      logger.warn("Dams Google Sheet load failed — falling back to CSV", {
         err: String(err),
       });
     }

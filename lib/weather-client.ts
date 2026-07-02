@@ -6,7 +6,7 @@ import type { WeatherHistoryRow, WeatherLatest } from "@/lib/types";
 
 export type HistoryFetchResult = {
   rows: WeatherHistoryRow[];
-  source?: "sheet" | "api" | "merged";
+  source?: "sheet" | "api";
 };
 
 async function readApi<T>(url: string): Promise<T> {

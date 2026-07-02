@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { googleSheetsStorage } from "@/lib/google-sheets-storage";
 import { logger } from "@/lib/logger";
 import { historyRowToLatest } from "@/lib/weather-map";
+import { syncMissingWeatherToSheet } from "@/lib/weather-sheet-sync";
 import { weatherAPI } from "@/lib/weather-wu";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,15 @@ async function loadLatestFromSheet() {
 
 export async function GET() {
   try {
+    if (googleSheetsStorage.isConfigured()) {
+      const sync = await syncMissingWeatherToSheet();
+      if (sync.rowsAffected && sync.rowsAffected > 0) {
+        logger.info("Catch-up synced to Google Sheets", {
+          rowsAffected: sync.rowsAffected,
+        });
+      }
+    }
+
     const data = await weatherAPI.getCurrent();
     logger.info("Latest weather served", {
       stationId: data.stationId,

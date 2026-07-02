@@ -42,10 +42,7 @@ export const appConfig = {
     enabled:
       process.env.GOOGLE_SHEETS_ENABLED === "true" ||
       Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim()),
-    credentialsPath:
-      process.env.GOOGLE_CREDENTIALS_PATH ??
-      process.env.GOOGLE_SERVICE_ACCOUNT_JSON_PATH ??
-      "",
+    serviceAccountJson: process.env.GOOGLE_SERVICE_ACCOUNT_JSON ?? "",
     spreadsheetId:
       process.env.GOOGLE_SPREADSHEET_ID ?? DEFAULT_SPREADSHEET_ID,
     worksheetName: process.env.GOOGLE_WORKSHEET_NAME ?? "Sheet1",

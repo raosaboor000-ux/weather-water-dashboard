@@ -16,8 +16,11 @@ import {
 import { logger } from "@/lib/logger";
 import type { DamsDataset } from "@/lib/dams-types";
 
+import type { sheets_v4 } from "googleapis";
+
 let cached: DamsDataset | null = null;
 let cachedAt = 0;
+let resolvedWorksheetName: string | null = null;
 
 const CACHE_TTL_MS = Number(process.env.DAMS_SHEETS_CACHE_TTL_MS ?? "120000");
 
@@ -28,7 +31,7 @@ function spreadsheetId(): string {
   );
 }
 
-function worksheetName(): string {
+function preferredWorksheetName(): string {
   return (
     appConfig.waterLevels.googleSheet.worksheetName ||
     DEFAULT_DAMS_WORKSHEET_NAME
@@ -44,6 +47,67 @@ export function isDamsSheetsConfigured(): boolean {
 export function invalidateDamsSheetsCache(): void {
   cached = null;
   cachedAt = 0;
+  resolvedWorksheetName = null;
+}
+
+async function resolveDamsWorksheet(
+  sheets: sheets_v4.Sheets,
+  id: string
+): Promise<string> {
+  if (resolvedWorksheetName) return resolvedWorksheetName;
+
+  const preferred = preferredWorksheetName();
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: id });
+  const titles =
+    meta.data.sheets
+      ?.map((s) => s.properties?.title)
+      .filter((t): t is string => Boolean(t?.trim())) ?? [];
+
+  if (titles.includes(preferred)) {
+    resolvedWorksheetName = preferred;
+    return preferred;
+  }
+
+  if (titles.length > 0) {
+    resolvedWorksheetName = titles[0]!;
+    logger.warn("Dams worksheet not found — using first tab", {
+      preferred,
+      using: resolvedWorksheetName,
+      available: titles,
+    });
+    return resolvedWorksheetName;
+  }
+
+  resolvedWorksheetName = preferred;
+  return preferred;
+}
+
+async function fetchDamsSheetValues(
+  sheets: sheets_v4.Sheets,
+  id: string,
+  tab: string
+): Promise<string[][]> {
+  const quoted = quoteSheetName(tab);
+  const ranges = [`${quoted}!A:R`, `${quoted}!A:Z`, quoted];
+
+  let lastError: unknown;
+  for (const range of ranges) {
+    try {
+      const res = await sheets.spreadsheets.values.get({
+        spreadsheetId: id,
+        range,
+        valueRenderOption: "FORMATTED_VALUE",
+        dateTimeRenderOption: "FORMATTED_STRING",
+      });
+      return (res.data.values ?? []) as string[][];
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(String(lastError));
 }
 
 export async function loadDamsDatasetFromSheets(
@@ -63,17 +127,9 @@ export async function loadDamsDatasetFromSheets(
   }
 
   const id = spreadsheetId();
-  const tab = worksheetName();
-  const range = `${quoteSheetName(tab)}!A:R`;
+  const tab = await resolveDamsWorksheet(sheets, id);
+  const values = await fetchDamsSheetValues(sheets, id, tab);
 
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: id,
-    range,
-    valueRenderOption: "FORMATTED_VALUE",
-    dateTimeRenderOption: "FORMATTED_STRING",
-  });
-
-  const values = (res.data.values ?? []) as string[][];
   if (values.length < 2) {
     throw new Error("Dams Google Sheet has no data rows.");
   }
@@ -101,7 +157,7 @@ export function damsSheetsMeta() {
   const id = spreadsheetId();
   return {
     spreadsheetId: id,
-    worksheetName: worksheetName(),
+    worksheetName: resolvedWorksheetName ?? preferredWorksheetName(),
     spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${id}/edit`,
   };
 }
