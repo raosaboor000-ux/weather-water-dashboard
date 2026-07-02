@@ -8,6 +8,7 @@ import {
   observationTimeLabel,
   type DailyAggregateRow,
 } from "@/lib/history-aggregate";
+import { weatherDisplayUnits } from "@/lib/display-units";
 import type { WeatherHistoryRow } from "@/lib/types";
 import { sortOldestFirst } from "@/lib/history-utils";
 
@@ -23,6 +24,7 @@ function StatCell({ value }: { value: string }) {
 }
 
 export function HistoryDataTable({ mode, rows }: Props) {
+  const units = weatherDisplayUnits();
   const dailyRows = useMemo(() => sortOldestFirst(rows), [rows]);
   const aggregateRows = useMemo(() => aggregateDailyStats(rows), [rows]);
 
@@ -37,17 +39,17 @@ export function HistoryDataTable({ mode, rows }: Props) {
             <thead className="bg-slate-50 text-left text-xs font-semibold uppercase text-ink-subtle">
               <tr>
                 <th className="px-3 py-2">Time</th>
-                <th className="px-3 py-2">Temp (°C)</th>
-                <th className="px-3 py-2">Dew (°C)</th>
+                <th className="px-3 py-2">Temp ({units.tempSymbol})</th>
+                <th className="px-3 py-2">Dew ({units.tempSymbol})</th>
                 <th className="px-3 py-2">Humidity (%)</th>
                 <th className="px-3 py-2">Wind</th>
-                <th className="px-3 py-2">Speed (km/h)</th>
-                <th className="px-3 py-2">Gust (km/h)</th>
-                <th className="px-3 py-2">Pressure (hPa)</th>
-                <th className="px-3 py-2">Precip. rate (mm)</th>
-                <th className="px-3 py-2">Precip. accum. (mm)</th>
+                <th className="px-3 py-2">Speed ({units.windSymbol})</th>
+                <th className="px-3 py-2">Gust ({units.windSymbol})</th>
+                <th className="px-3 py-2">Pressure ({units.pressureSymbol})</th>
+                <th className="px-3 py-2">{units.precipRateLabel}</th>
+                <th className="px-3 py-2">{units.precipTotalLabel}</th>
                 <th className="px-3 py-2">UV</th>
-                <th className="px-3 py-2">Solar (W/m²)</th>
+                <th className="px-3 py-2">{units.solarLabel}</th>
               </tr>
             </thead>
             <tbody>
@@ -101,23 +103,39 @@ export function HistoryDataTable({ mode, rows }: Props) {
   }
 
   return (
-    <AggregateTable rows={aggregateRows} />
+    <AggregateTable rows={aggregateRows} units={units} />
   );
 }
 
-function AggregateTable({ rows }: { rows: DailyAggregateRow[] }) {
+function AggregateTable({
+  rows,
+  units,
+}: {
+  rows: DailyAggregateRow[];
+  units: ReturnType<typeof weatherDisplayUnits>;
+}) {
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-card">
       <table className="min-w-[1000px] w-full text-sm">
         <thead className="bg-slate-100 text-left text-xs font-semibold uppercase text-ink">
           <tr>
             <th className="px-2 py-2" rowSpan={2}>Date</th>
-            <th className="border-l border-slate-200 px-2 py-2 text-center" colSpan={3}>Temperature (°C)</th>
-            <th className="border-l border-slate-200 px-2 py-2 text-center" colSpan={3}>Dew Point (°C)</th>
+            <th className="border-l border-slate-200 px-2 py-2 text-center" colSpan={3}>
+              Temperature ({units.tempSymbol})
+            </th>
+            <th className="border-l border-slate-200 px-2 py-2 text-center" colSpan={3}>
+              Dew Point ({units.tempSymbol})
+            </th>
             <th className="border-l border-slate-200 px-2 py-2 text-center" colSpan={3}>Humidity (%)</th>
-            <th className="border-l border-slate-200 px-2 py-2 text-center" colSpan={3}>Speed (km/h)</th>
-            <th className="border-l border-slate-200 px-2 py-2 text-center" colSpan={2}>Pressure (hPa)</th>
-            <th className="border-l border-slate-200 px-2 py-2 text-center">Precip. (mm)</th>
+            <th className="border-l border-slate-200 px-2 py-2 text-center" colSpan={3}>
+              Speed ({units.windSymbol})
+            </th>
+            <th className="border-l border-slate-200 px-2 py-2 text-center" colSpan={2}>
+              Pressure ({units.pressureSymbol})
+            </th>
+            <th className="border-l border-slate-200 px-2 py-2 text-center">
+              Precip. ({units.precipSymbol})
+            </th>
           </tr>
           <tr>
             <th className="border-l border-slate-200 px-2 py-1 text-center font-normal">High</th>

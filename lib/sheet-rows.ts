@@ -5,6 +5,13 @@ import { SHEET_HEADERS } from "@/lib/sheet-config";
 
 const TZ = appConfig.station.timezone;
 
+function cellToString(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return String(value);
+}
+
 export function stationYmdFromIso(iso: string): string {
   return new Date(iso).toLocaleDateString("en-CA", { timeZone: TZ });
 }
@@ -57,8 +64,8 @@ export function weatherLatestToSheetCells(w: WeatherLatest): string[] {
   ];
 }
 
-export function cellsToRow(cells: string[]): SheetObservationRow | null {
-  const c = [...cells];
+export function cellsToRow(cells: unknown[]): SheetObservationRow | null {
+  const c = cells.map(cellToString);
   while (c.length < 14) c.push("");
   const first = (c[0] ?? "").toLowerCase();
   if (first.includes("timestamp")) return null;
@@ -103,10 +110,11 @@ export function cellsToRow(cells: string[]): SheetObservationRow | null {
   };
 }
 
-export function parseRowsFromValues(rows: string[][]): SheetObservationRow[] {
+export function parseRowsFromValues(rows: unknown[][]): SheetObservationRow[] {
   if (rows.length === 0) return [];
   let start = 0;
-  if ((rows[0]?.[0] ?? "").toLowerCase().includes("timestamp")) start = 1;
+  const firstCell = cellToString(rows[0]?.[0]);
+  if (firstCell.toLowerCase().includes("timestamp")) start = 1;
   const out: SheetObservationRow[] = [];
   for (let i = start; i < rows.length; i++) {
     const r = cellsToRow(rows[i] ?? []);

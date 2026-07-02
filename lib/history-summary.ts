@@ -3,6 +3,7 @@
  */
 
 import type { WeatherHistoryRow } from "@/lib/types";
+import { weatherDisplayUnits } from "@/lib/display-units";
 import { firstNumber } from "@/lib/weather-parse";
 
 export type StatTriple = { high: string; low: string; avg: string };
@@ -56,7 +57,7 @@ function triple(values: number[], decimals = 1, suffix = ""): StatTriple {
   return { high: fmt(high), low: fmt(low), avg: fmt(avg) };
 }
 
-function pressureTriple(values: number[]): StatTriple {
+function pressureTriple(values: number[], symbol: string): StatTriple {
   if (values.length === 0) return EMPTY;
   const high = Math.max(...values);
   const low = Math.min(...values);
@@ -65,13 +66,14 @@ function pressureTriple(values: number[]): StatTriple {
     n.toLocaleString("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }) + " hPa";
+    }) + ` ${symbol}`;
   return { high: f(high), low: f(low), avg: f(avg) };
 }
 
 export function summarizeHistory(rows: WeatherHistoryRow[]): HistorySummary {
   if (rows.length === 0) return emptyHistorySummary();
 
+  const units = weatherDisplayUnits();
   const precipTotals = nums(rows, (r) => r.precipTotal);
   const precipRates = nums(rows, (r) => r.precipRate);
   const precipVals = precipTotals.length > 0 ? precipTotals : precipRates;
@@ -79,15 +81,15 @@ export function summarizeHistory(rows: WeatherHistoryRow[]): HistorySummary {
   const lastWind = rows[rows.length - 1]?.wind?.trim() || "—";
 
   return {
-    temperature: triple(nums(rows, (r) => r.temperature), 1, "°C"),
-    dewPoint: triple(nums(rows, (r) => r.dewPoint), 1, "°C"),
+    temperature: triple(nums(rows, (r) => r.temperature), 1, units.tempSymbol),
+    dewPoint: triple(nums(rows, (r) => r.dewPoint), 1, units.tempSymbol),
     humidity: triple(nums(rows, (r) => r.humidity), 0, "%"),
-    precipitation: triple(precipVals, 2, "mm"),
-    windSpeed: triple(nums(rows, (r) => r.speed), 1, "km/h"),
-    windGust: triple(nums(rows, (r) => r.gust), 1, "km/h"),
+    precipitation: triple(precipVals, 2, units.precipSymbol),
+    windSpeed: triple(nums(rows, (r) => r.speed), 1, units.windSymbol),
+    windGust: triple(nums(rows, (r) => r.gust), 1, units.windSymbol),
     windDirection: { high: "—", low: "—", avg: lastWind },
-    pressure: pressureTriple(nums(rows, (r) => r.pressure)),
-    solar: triple(nums(rows, (r) => r.solar), 1, "W/m²"),
+    pressure: pressureTriple(nums(rows, (r) => r.pressure), units.pressureSymbol),
+    solar: triple(nums(rows, (r) => r.solar), 1, units.solarSymbol),
     uv: triple(nums(rows, (r) => r.uv), 0, ""),
   };
 }

@@ -16,6 +16,7 @@ import type { Chart, ScriptableContext } from "chart.js";
 import { Line } from "react-chartjs-2";
 import { ChartPanel } from "@/components/charts/ChartPanel";
 import { C, skyVerticalGradient, weatherLineChartOptions } from "@/lib/chart-theme";
+import { weatherDisplayUnits } from "@/lib/display-units";
 import type { ChartSeries } from "@/lib/history-utils";
 
 ChartJS.register(
@@ -40,6 +41,7 @@ type Props = {
 };
 
 export function WeatherCharts({ series, mode }: Props) {
+  const units = weatherDisplayUnits();
   const stackedOpts = useMemo(
     () => weatherLineChartOptions({ legendPosition: "right", stackedTicks: true }),
     []
@@ -91,14 +93,14 @@ export function WeatherCharts({ series, mode }: Props) {
         labels: series.labels,
         datasets: [
           {
-            label: "Temperature (°C)",
+            label: `Temperature (${units.tempSymbol})`,
             data: series.temp,
             borderColor: C.sky,
             backgroundColor: grad("rgba(14, 165, 233, 0.35)", "rgba(240, 249, 255, 0.02)"),
             fill: true,
           },
           {
-            label: "Dew Point (°C)",
+            label: `Dew Point (${units.tempSymbol})`,
             data: series.dew,
             borderColor: C.teal,
             backgroundColor: grad("rgba(20, 184, 166, 0.3)", "rgba(240, 249, 255, 0.02)"),
@@ -130,14 +132,14 @@ export function WeatherCharts({ series, mode }: Props) {
         labels: series.labels,
         datasets: [
           {
-            label: "Wind speed (km/h)",
+            label: `Wind speed (${units.windSymbol})`,
             data: series.wind,
             borderColor: C.sky,
             backgroundColor: grad("rgba(14, 165, 233, 0.28)", "rgba(240, 249, 255, 0.02)"),
             fill: true,
           },
           {
-            label: "Wind gust (km/h)",
+            label: `Wind gust (${units.windSymbol})`,
             data: series.gust,
             borderColor: C.amber,
             backgroundColor: "transparent",
@@ -172,14 +174,14 @@ export function WeatherCharts({ series, mode }: Props) {
         labels: series.labels,
         datasets: [
           {
-            label: "Precip. accum. (mm)",
+            label: `Precip. accum. (${units.precipSymbol})`,
             data: series.precipTotal,
             borderColor: C.sky,
             backgroundColor: grad("rgba(14, 165, 233, 0.28)", "rgba(240, 249, 255, 0.02)"),
             fill: true,
           },
           {
-            label: "Precip. rate (mm)",
+            label: `Precip. rate (${units.precipSymbol})`,
             data: series.precipRate,
             borderColor: C.teal,
             backgroundColor: "transparent",
@@ -195,7 +197,7 @@ export function WeatherCharts({ series, mode }: Props) {
         labels: series.labels,
         datasets: [
           {
-            label: "Pressure (hPa)",
+            label: `Pressure (${units.pressureSymbol})`,
             data: series.pressure,
             borderColor: C.slate,
             backgroundColor: grad("rgba(100, 116, 139, 0.2)", "rgba(240, 249, 255, 0.02)"),
@@ -211,7 +213,7 @@ export function WeatherCharts({ series, mode }: Props) {
         labels: series.labels,
         datasets: [
           {
-            label: "Solar (W/m²)",
+            label: units.solarLabel,
             data: series.solar,
             borderColor: C.amber,
             backgroundColor: grad("rgba(245, 158, 11, 0.35)", "rgba(240, 249, 255, 0.02)"),

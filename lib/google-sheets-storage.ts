@@ -24,21 +24,43 @@ import {
 } from "@/lib/sheet-rows";
 import type { SheetObservationRow, StorageResult } from "@/lib/sheet-types";
 import type { WeatherHistoryRow, WeatherLatest } from "@/lib/types";
+import {
+  canAppendObservation,
+  dedupeHistoryForDisplay,
+  selectRowsToAppend,
+} from "@/lib/weather-timestamp";
 
 import type { sheets_v4 } from "googleapis";
 
 const APPEND_BATCH_SIZE = 100;
 
-function existingTimestampSet(values: string[][]): Set<string> {
+let sheetWriteChain: Promise<unknown> = Promise.resolve();
+
+function enqueueSheetWrite<T>(fn: () => Promise<T>): Promise<T> {
+  const run = sheetWriteChain.then(fn);
+  sheetWriteChain = run.then(
+    () => undefined,
+    () => undefined
+  );
+  return run;
+}
+
+function listSheetTimestamps(values: string[][]): string[] {
   const headerOffset =
     values[0]?.[0]?.toLowerCase().includes("timestamp") ? 1 : 0;
-  const set = new Set<string>();
+  const out: string[] = [];
   for (let i = headerOffset; i < values.length; i++) {
-    const iso = (values[i]?.[0] ?? "").trim();
-    if (iso) set.add(iso);
+    const raw = values[i]?.[0];
+    const iso = raw == null ? "" : String(raw).trim();
+    if (iso) out.push(iso);
   }
-  return set;
+  return out;
 }
+
+const SHEET_READ_OPTS = {
+  valueRenderOption: "UNFORMATTED_VALUE" as const,
+  dateTimeRenderOption: "FORMATTED_STRING" as const,
+};
 
 async function resolveSheetRange(sheets: sheets_v4.Sheets) {
   const spreadsheetId = appConfig.googleSheets.spreadsheetId || DEFAULT_SPREADSHEET_ID;
@@ -59,28 +81,6 @@ async function resolveSheetRange(sheets: sheets_v4.Sheets) {
   };
 }
 
-function sheetHasTimestamp(values: string[][], iso: string): boolean {
-  const headerOffset =
-    values[0]?.[0]?.toLowerCase().includes("timestamp") ? 1 : 0;
-  const want = iso.trim();
-  for (let i = headerOffset; i < values.length; i++) {
-    if ((values[i]?.[0] ?? "").trim() === want) return true;
-  }
-  return false;
-}
-
-function lastTimestampMs(values: string[][]): number | null {
-  const headerOffset =
-    values[0]?.[0]?.toLowerCase().includes("timestamp") ? 1 : 0;
-  for (let i = values.length - 1; i >= headerOffset; i--) {
-    const iso = (values[i]?.[0] ?? "").trim();
-    if (!iso) continue;
-    const t = new Date(iso).getTime();
-    if (!Number.isNaN(t)) return t;
-  }
-  return null;
-}
-
 export class GoogleSheetsStorage {
   get spreadsheetId(): string {
     return appConfig.googleSheets.spreadsheetId || DEFAULT_SPREADSHEET_ID;
@@ -93,9 +93,15 @@ export class GoogleSheetsStorage {
   }
 
   /**
-   * Append any API rows whose timestamps are not already in the sheet.
+   * Append API rows whose exact timestamps are not already in the sheet.
    */
   async syncMissingRows(apiRows: WeatherHistoryRow[]): Promise<StorageResult> {
+    return enqueueSheetWrite(() => this._syncMissingRowsImpl(apiRows));
+  }
+
+  private async _syncMissingRowsImpl(
+    apiRows: WeatherHistoryRow[]
+  ): Promise<StorageResult> {
     if (!this.isConfigured()) {
       return {
         success: false,
@@ -120,17 +126,11 @@ export class GoogleSheetsStorage {
       const existing = await sheets.spreadsheets.values.get({
         spreadsheetId,
         range: dataRange,
+        ...SHEET_READ_OPTS,
       });
       const values = (existing.data.values ?? []) as string[][];
-      const known = existingTimestampSet(values);
-
-      const missing = apiRows
-        .filter((r) => r.timestampIso?.trim() && !known.has(r.timestampIso.trim()))
-        .sort(
-          (a, b) =>
-            new Date(a.timestampIso).getTime() -
-            new Date(b.timestampIso).getTime()
-        );
+      const existingTimestamps = listSheetTimestamps(values);
+      const missing = selectRowsToAppend(apiRows, existingTimestamps);
 
       if (missing.length === 0) {
         return {
@@ -165,6 +165,7 @@ export class GoogleSheetsStorage {
       logger.info("Sheet catch-up complete", {
         spreadsheetId,
         rowsAdded: missing.length,
+        skipped: apiRows.length - missing.length,
       });
 
       return {
@@ -187,6 +188,10 @@ export class GoogleSheetsStorage {
    * Append the latest observation if this timestamp is not already stored.
    */
   async saveWeather(latest: WeatherLatest): Promise<StorageResult> {
+    return enqueueSheetWrite(() => this._saveWeatherImpl(latest));
+  }
+
+  private async _saveWeatherImpl(latest: WeatherLatest): Promise<StorageResult> {
     if (!this.isConfigured()) {
       return {
         success: false,
@@ -206,12 +211,16 @@ export class GoogleSheetsStorage {
       const existing = await sheets.spreadsheets.values.get({
         spreadsheetId,
         range: dataRange,
+        ...SHEET_READ_OPTS,
       });
       const values = (existing.data.values ?? []) as string[][];
       const writeIso = latest.lastUpdated.trim();
+      const existingTimestamps = listSheetTimestamps(values);
 
-      if (sheetHasTimestamp(values, writeIso)) {
-        logger.info("Sheet save skipped — duplicate timestamp", { writeIso });
+      if (!canAppendObservation(writeIso, existingTimestamps)) {
+        logger.info("Sheet save skipped — already stored or too soon", {
+          writeIso,
+        });
         return {
           success: true,
           message: "Observation already stored.",
@@ -231,14 +240,6 @@ export class GoogleSheetsStorage {
           requestBody: { values: [headerRow(), row] },
         });
       } else {
-        const lastMs = lastTimestampMs(values);
-        const currMs = new Date(writeIso).getTime();
-        if (lastMs != null && !Number.isNaN(currMs) && currMs < lastMs) {
-          return {
-            success: false,
-            message: "Observation is older than the last sheet row — not appended.",
-          };
-        }
         await sheets.spreadsheets.values.append({
           spreadsheetId,
           range: appendAnchor,
@@ -265,10 +266,10 @@ export class GoogleSheetsStorage {
     }
   }
 
-  /** Load all observations from the spreadsheet. */
+  /** Load all observations from the spreadsheet (deduped for display). */
   async loadWeather(): Promise<WeatherHistoryRow[]> {
     const rows = await this._readSheetRows();
-    return rows.map(sheetRowToHistory);
+    return dedupeHistoryForDisplay(rows.map(sheetRowToHistory));
   }
 
   /** Filter stored observations to a date range (inclusive, station calendar dates). */
@@ -309,6 +310,7 @@ export class GoogleSheetsStorage {
       const res = await sheets.spreadsheets.values.get({
         spreadsheetId,
         range: dataRange,
+        ...SHEET_READ_OPTS,
       });
       return parseRowsFromValues((res.data.values ?? []) as string[][]);
     } catch (err) {

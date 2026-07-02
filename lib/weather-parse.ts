@@ -1,5 +1,7 @@
 /** Extract first numeric value from formatted strings like "1,018.96 hPa". */
-export function firstNumber(s: string): number | null {
+export function firstNumber(s: unknown): number | null {
+  if (typeof s === "number" && Number.isFinite(s)) return s;
+  if (typeof s !== "string") return null;
   const m = s.match(/-?[\d,]+\.?\d*/);
   if (!m) return null;
   return parseFloat(m[0].replace(/,/g, ""));

@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
 import { getWeatherHistory } from "@/lib/history-merge";
 import { logger } from "@/lib/logger";
-import { syncMissingWeatherToSheet } from "@/lib/weather-sheet-sync";
+import { syncApiHistoryToSheet } from "@/lib/weather-sheet-sync";
 
 export const dynamic = "force-dynamic";
 
 const noStore = { "Cache-Control": "no-store, max-age=0" };
 
+/** On load/refresh: WU API → append unsaved rows → return sheet history. */
 export async function GET() {
   try {
-    const sync = await syncMissingWeatherToSheet();
+    const sync = await syncApiHistoryToSheet();
     if (sync.rowsAffected && sync.rowsAffected > 0) {
-      logger.info("Catch-up synced to Google Sheets", {
+      logger.info("API history saved to Google Sheets", {
         rowsAffected: sync.rowsAffected,
       });
     }

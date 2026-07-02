@@ -2,6 +2,7 @@
  * Browser-side client for internal weather API routes.
  */
 
+import type { QueryClient } from "@tanstack/react-query";
 import type { WeatherHistoryRow, WeatherLatest } from "@/lib/types";
 
 export type HistoryFetchResult = {
@@ -26,4 +27,14 @@ export async function fetchLatestWeather(): Promise<WeatherLatest> {
 
 export async function fetchWeatherHistory(): Promise<HistoryFetchResult> {
   return readApi<HistoryFetchResult>("/api/weather/history");
+}
+
+/** Sync sheet from WU API, then refresh current conditions and history. */
+export async function refreshWeatherData(
+  queryClient: QueryClient
+): Promise<void> {
+  await Promise.all([
+    queryClient.refetchQueries({ queryKey: ["weather", "history"] }),
+    queryClient.refetchQueries({ queryKey: ["weather", "latest"] }),
+  ]);
 }

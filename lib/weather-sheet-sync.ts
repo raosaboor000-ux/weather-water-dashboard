@@ -1,15 +1,16 @@
 /**
- * On each visit, backfill any WU readings not yet stored in Google Sheets.
+ * Sync WU API history into Google Sheets — append any reading not already stored.
  */
 
 import { googleSheetsStorage } from "@/lib/google-sheets-storage";
 import { logger } from "@/lib/logger";
 import type { StorageResult } from "@/lib/sheet-types";
+import { parseObservationTimeMs } from "@/lib/weather-timestamp";
 import { weatherAPI } from "@/lib/weather-wu";
 
 let syncInFlight: Promise<StorageResult> | null = null;
 
-export async function syncMissingWeatherToSheet(): Promise<StorageResult> {
+export async function syncApiHistoryToSheet(): Promise<StorageResult> {
   if (!googleSheetsStorage.isConfigured()) {
     return {
       success: false,
@@ -23,13 +24,35 @@ export async function syncMissingWeatherToSheet(): Promise<StorageResult> {
   syncInFlight = (async () => {
     try {
       const apiRows = await weatherAPI.getCatchUpHistory();
-      return await googleSheetsStorage.syncMissingRows(apiRows);
+
+      if (apiRows.length === 0) {
+        logger.info("Sheet sync skipped — no API history");
+        return {
+          success: true,
+          message: "No API history returned.",
+          rowsAffected: 0,
+        };
+      }
+
+      const result = await googleSheetsStorage.syncMissingRows(apiRows);
+      if (result.rowsAffected && result.rowsAffected > 0) {
+        logger.info("Sheet sync appended rows", {
+          rowsAffected: result.rowsAffected,
+          latest: apiRows
+            .sort(
+              (a, b) =>
+                parseObservationTimeMs(b.timestampIso) -
+                parseObservationTimeMs(a.timestampIso)
+            )[0]?.timestampIso,
+        });
+      }
+      return result;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      logger.warn("Weather catch-up sync failed", { error: message });
+      logger.warn("API → sheet sync failed", { error: message });
       return {
         success: false,
-        message: `Catch-up failed: ${message}`,
+        message: `Sync failed: ${message}`,
         rowsAffected: 0,
       };
     }

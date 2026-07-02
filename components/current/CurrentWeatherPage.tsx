@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { CurrentConditionsHero } from "@/components/current/CurrentConditionsHero";
 import { MetricGrid } from "@/components/current/MetricGrid";
@@ -10,21 +10,23 @@ import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { appConfig } from "@/lib/config";
+import { weatherDisplayUnits } from "@/lib/display-units";
 import { weatherQueryConfig } from "@/lib/query-config";
-import { fetchLatestWeather } from "@/lib/weather-client";
+import { fetchLatestWeather, refreshWeatherData } from "@/lib/weather-client";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
 const BLANK = "—";
 
 export function CurrentWeatherPage() {
+  const units = weatherDisplayUnits();
+  const queryClient = useQueryClient();
   const {
     data,
     isPending,
     isError,
     error,
     isFetching,
-    refetch,
     dataUpdatedAt,
   } = useQuery({
     queryKey: ["weather", "latest"],
@@ -33,6 +35,8 @@ export function CurrentWeatherPage() {
     refetchInterval: weatherQueryConfig.latestRefetchMs,
     refetchOnWindowFocus: true,
   });
+
+  const historyFetching = useIsFetching({ queryKey: ["weather", "history"] });
 
   if (isPending && !data) {
     return (
@@ -56,11 +60,14 @@ export function CurrentWeatherPage() {
         subtitle={appConfig.station.label}
         online={data?.online ?? false}
         lastUpdated={lastUpdatedLabel}
-        onRefresh={() => void refetch()}
-        isRefreshing={isFetching}
+        onRefresh={() => void refreshWeatherData(queryClient)}
+        isRefreshing={isFetching || historyFetching > 0}
       />
 
-      <PageHero title="Current conditions at a glance" />
+      <PageHero
+        title="Current conditions at a glance"
+        subtitle={units.legend}
+      />
 
       {isError && (
         <div className="mb-6">

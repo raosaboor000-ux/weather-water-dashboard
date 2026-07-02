@@ -1,6 +1,5 @@
 /**
- * Historical weather — Google Sheets is the source of truth.
- * On each visit, syncMissingWeatherToSheet() backfills gaps from WU first.
+ * Historical weather — served from Google Sheets after API catch-up sync.
  */
 
 import { googleSheetsStorage } from "@/lib/google-sheets-storage";
@@ -22,15 +21,12 @@ export async function getWeatherHistory(): Promise<{
   if (googleSheetsStorage.isConfigured()) {
     try {
       const sheetRows = await googleSheetsStorage.loadWeather();
-      if (sheetRows.length > 0) {
-        return { rows: sortNewestFirst(sheetRows), source: "sheet" };
-      }
+      return { rows: sortNewestFirst(sheetRows), source: "sheet" };
     } catch (err) {
       logger.warn("Sheet history load failed", { err: String(err) });
     }
   }
 
-  // Empty sheet — show today's readings until rows accumulate (no 7-day API calls).
-  const apiRows = await weatherAPI.getDaily();
-  return { rows: apiRows, source: "api" };
+  const apiRows = await weatherAPI.getCatchUpHistory();
+  return { rows: sortNewestFirst(apiRows), source: "api" };
 }

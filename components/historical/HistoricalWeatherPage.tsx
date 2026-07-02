@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardHeader } from "@/components/layout/DashboardHeader";
 import { PageHero } from "@/components/layout/PageHero";
@@ -24,17 +24,20 @@ import {
   type HistoryMode,
 } from "@/lib/history-utils";
 import { summarizeHistory } from "@/lib/history-summary";
+import { weatherDisplayUnits } from "@/lib/display-units";
 import { weatherQueryConfig } from "@/lib/query-config";
-import { fetchWeatherHistory } from "@/lib/weather-client";
+import { fetchWeatherHistory, refreshWeatherData } from "@/lib/weather-client";
 
 type Tab = "graph" | "table";
 
 const SOURCE_LABEL = {
-  sheet: "Google Sheets",
-  api: "Weather Underground (today only)",
+  sheet: "Google Sheets (synced from API)",
+  api: "Weather Underground API",
 } as const;
 
 export function HistoricalWeatherPage() {
+  const units = weatherDisplayUnits();
+  const queryClient = useQueryClient();
   const [mode, setMode] = useState<HistoryMode>("daily");
   const [stationDayYmd, setStationDayYmd] = useState(todayStationYmd);
   const [anchor, setAnchor] = useState(() => new Date());
@@ -46,15 +49,17 @@ export function HistoricalWeatherPage() {
     isError,
     error,
     isFetching,
-    refetch,
     dataUpdatedAt,
   } = useQuery({
     queryKey: ["weather", "history"],
     queryFn: fetchWeatherHistory,
     staleTime: weatherQueryConfig.historyStaleMs,
     refetchInterval: weatherQueryConfig.historyRefetchMs,
+    refetchOnWindowFocus: true,
     placeholderData: keepPreviousData,
   });
+
+  const latestFetching = useIsFetching({ queryKey: ["weather", "latest"] });
 
   const rows = useMemo(() => data?.rows ?? [], [data?.rows]);
   const source = data?.source;
@@ -74,17 +79,17 @@ export function HistoricalWeatherPage() {
   const title = periodTitle(mode, stationDayYmd, anchor);
 
   const leftSummary = summaryToRows([
-    { label: "Temperature (°C)", stat: summary.temperature },
-    { label: "Dew Point (°C)", stat: summary.dewPoint },
-    { label: "Humidity (%)", stat: summary.humidity },
-    { label: "Precipitation (mm)", stat: summary.precipitation },
+    { label: units.tempLabel, stat: summary.temperature },
+    { label: units.dewLabel, stat: summary.dewPoint },
+    { label: units.humidityLabel, stat: summary.humidity },
+    { label: `Precipitation (${units.precipSymbol})`, stat: summary.precipitation },
   ]);
 
   const rightSummary = summaryToRows([
-    { label: "Wind Speed (km/h)", stat: summary.windSpeed },
-    { label: "Wind Gust (km/h)", stat: summary.windGust },
+    { label: units.windLabel, stat: summary.windSpeed },
+    { label: units.gustLabel, stat: summary.windGust },
     { label: "Wind Direction", stat: summary.windDirection },
-    { label: "Pressure (hPa)", stat: summary.pressure },
+    { label: units.pressureLabel, stat: summary.pressure },
   ]);
 
   return (
@@ -98,8 +103,8 @@ export function HistoricalWeatherPage() {
             ? new Date(dataUpdatedAt).toLocaleTimeString()
             : undefined
         }
-        onRefresh={() => void refetch()}
-        isRefreshing={isFetching}
+        onRefresh={() => void refreshWeatherData(queryClient)}
+        isRefreshing={isFetching || latestFetching > 0}
       />
 
       <PageHero
@@ -107,8 +112,8 @@ export function HistoricalWeatherPage() {
         title="Charts, summaries, and data tables"
         subtitle={
           source
-            ? `Data: ${SOURCE_LABEL[source] ?? source} · refreshes every 5 minutes`
-            : "Auto-refreshes every 5 minutes"
+            ? `${SOURCE_LABEL[source] ?? source} · ${units.legend} · syncs every 5 min when open`
+            : `${units.legend} · syncs every 5 min when open`
         }
       />
 
