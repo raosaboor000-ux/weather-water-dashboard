@@ -6,7 +6,7 @@ import { AppShell } from "@/components/layout/AppShell";
 export const metadata: Metadata = {
   title: "AWS TALAGANG Weather Dashboard",
   description:
-    "Live weather and historical trends for AWS TALAGANG (Weather Underground station ITALAG18).",
+    "Live weather and historical trends for AWS TALAGANG (Weather Underground station ITALAG19).",
 };
 
 export default function RootLayout({

@@ -15,7 +15,7 @@ import {
 
 export const appConfig = {
   station: {
-    id: process.env.WU_STATION_ID ?? "ITALAG18",
+    id: process.env.WU_STATION_ID ?? "ITALAG19",
     name: process.env.WU_STATION_NAME ?? "AWS TALAGANG",
     label: process.env.WU_STATION_LABEL ?? "Personal Weather Station",
     timezone: process.env.STATION_TIMEZONE ?? "Asia/Karachi",
@@ -25,7 +25,7 @@ export const appConfig = {
   api: {
     wuApiKey:
       process.env.WU_API_KEY?.trim() ||
-      "4f2104d1b4784c34a104d1b4786c3417",
+      "7ed5e8f9e9ff4d6295e8f9e9ffed62fa",
     wuBaseUrl: "https://api.weather.com/v2/pws",
   },
   refresh: {
