@@ -1,4 +1,4 @@
-/** Google Sheets layout for AWS TALAGANG weather log. */
+/** Google Sheets layout for AWS6 - ITALAG18 weather log. */
 
 export const SHEET_HEADERS = [
   "timestamp_iso",

@@ -4,9 +4,9 @@ import { DashboardProviders } from "@/components/providers/DashboardProviders";
 import { AppShell } from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
-  title: "AWS TALAGANG Weather Dashboard",
+  title: "AWS6 - ITALAG18 Weather Dashboard",
   description:
-    "Live weather and historical trends for AWS TALAGANG (Weather Underground station ITALAG19).",
+    "Live weather and historical trends for AWS6 - ITALAG18 (Weather Underground station ITALAG18).",
 };
 
 export default function RootLayout({
