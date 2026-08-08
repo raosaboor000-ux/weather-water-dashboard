@@ -1,6 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { HydroSenseChatFab } from "@/components/assistant/HydroSenseChatFab";
+import "@/components/assistant/hydrosense-assistant.css";
 import { Footer } from "@/components/layout/Footer";
 import { TopNav } from "@/components/layout/TopNav";
 
@@ -14,6 +16,7 @@ export function AppShell({ children }: Props) {
       <TopNav />
       <main className="flex-1">{children}</main>
       <Footer />
+      <HydroSenseChatFab />
     </div>
   );
 }

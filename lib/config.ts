@@ -51,6 +51,11 @@ export const appConfig = {
     spreadsheetUrl:
       "https://docs.google.com/spreadsheets/d/1-L-gQMnd2i-ntLbevj9CIzt937ChxKwi6hemtWn_Fuw/edit",
   },
+  ai: {
+    groqModel: process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile",
+    timeoutMs: Number(process.env.GROQ_TIMEOUT_MS ?? "20000"),
+    whisperModel: process.env.GROQ_WHISPER_MODEL ?? "whisper-large-v3",
+  },
   waterLevels: {
     enabled: process.env.WATER_LEVELS_ENABLED !== "false",
     source: (process.env.DAMS_DATA_SOURCE ?? "sheets") as "sheets" | "csv",
