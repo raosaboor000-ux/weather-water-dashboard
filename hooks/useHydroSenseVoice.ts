@@ -44,9 +44,21 @@ function writeVoicePref(on: boolean) {
   }
 }
 
+const SSR_VOICE_SUPPORT: VoiceSupport = {
+  stt: false,
+  tts: false,
+  any: false,
+  secure: false,
+  mode: null,
+  hasNativeStt: false,
+  hasMedia: false,
+  hasRecorder: false,
+  micClickable: false,
+};
+
 export function useHydroSenseVoice() {
-  const [support] = useState<VoiceSupport>(() => voiceAgentSupported());
-  const [voiceEnabled, setVoiceEnabledState] = useState(readVoicePref);
+  const [support, setSupport] = useState<VoiceSupport>(SSR_VOICE_SUPPORT);
+  const [voiceEnabled, setVoiceEnabledState] = useState(true);
   const [listening, setListening] = useState(false);
   const [recording, setRecording] = useState(false);
   const [speaking, setSpeaking] = useState(false);
@@ -66,6 +78,11 @@ export function useHydroSenseVoice() {
   const recordStreamRef = useRef<MediaStream | null>(null);
   const recordTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const submittedRef = useRef(false);
+
+  useEffect(() => {
+    setSupport(voiceAgentSupported());
+    setVoiceEnabledState(readVoicePref());
+  }, []);
 
   useEffect(() => {
     if (typeof navigator !== "undefined" && navigator.permissions?.query) {

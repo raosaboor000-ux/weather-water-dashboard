@@ -53,12 +53,12 @@ type ChatMessage = {
   at: number;
 };
 
-function assistantMessage(body: string): ChatMessage {
+function assistantMessage(body: string, at?: number): ChatMessage {
   return {
     role: "assistant",
     title: "HydroSense AI",
     body,
-    at: Date.now(),
+    at: at ?? Date.now(),
   };
 }
 
@@ -127,8 +127,8 @@ type Props = {
 };
 
 export function HydroSenseChatCore({ speakGreetingOnOpen = false }: Props) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    assistantMessage(HYDROSENSE_GREETING),
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [
+    assistantMessage(HYDROSENSE_GREETING, 0),
   ]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -153,6 +153,12 @@ export function HydroSenseChatCore({ speakGreetingOnOpen = false }: Props) {
     voiceRef,
     micPermission,
   } = useHydroSenseVoice();
+
+  useEffect(() => {
+    setMessages((current) =>
+      current.map((msg) => (msg.at === 0 ? { ...msg, at: Date.now() } : msg))
+    );
+  }, []);
 
   useEffect(() => {
     threadRef.current?.scrollTo({
@@ -329,9 +335,11 @@ export function HydroSenseChatCore({ speakGreetingOnOpen = false }: Props) {
                 <div className="hs-bubble">
                   <div className="hs-msg-meta">
                     <b>{msg.title}</b>
-                    <time dateTime={new Date(msg.at).toISOString()}>
-                      {formatTime(msg.at)}
-                    </time>
+                    {msg.at > 0 ? (
+                      <time dateTime={new Date(msg.at).toISOString()}>
+                        {formatTime(msg.at)}
+                      </time>
+                    ) : null}
                   </div>
                   <p>{msg.body}</p>
                 </div>

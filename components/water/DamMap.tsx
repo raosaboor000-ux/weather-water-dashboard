@@ -9,7 +9,7 @@ const DamMapLeaflet = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-[420px] items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm text-ink-subtle">
+      <div className="flex h-[640px] items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm text-ink-subtle">
         Loading map…
       </div>
     ),
@@ -26,7 +26,7 @@ export function DamMap({ snapshots, highlightLocation, onSelect }: Props) {
   return (
     <div className="mb-8">
       <h2 className="mb-2 font-display text-lg font-semibold text-ink">
-        Dams on map (colored by status)
+        Dams on map
       </h2>
       <DamMapLeaflet
         snapshots={snapshots}

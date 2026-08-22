@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
-import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import { useEffect, useMemo } from "react";
+import L from "leaflet";
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
 import type { DamSnapshot } from "@/lib/dams-types";
 import {
   capacityBandColor,
@@ -34,6 +35,39 @@ function markerRadius(s: DamSnapshot, active: boolean): number {
   return active ? 11 : 8;
 }
 
+function panMapForPopup(map: L.Map, latlng: L.LatLngExpression) {
+  const ll = L.latLng(latlng);
+  const size = map.getSize();
+  const yShift = Math.min(260, Math.max(180, size.y * 0.32));
+  const projected = map.project(ll);
+  const target = map.unproject(L.point(projected.x, projected.y - yShift));
+  map.panTo(target, { animate: true, duration: 0.35 });
+}
+
+function FlyToHighlightedDam({
+  snapshots,
+  location,
+}: {
+  snapshots: DamSnapshot[];
+  location?: string;
+}) {
+  const map = useMap();
+  const skipFirst = useMemo(() => ({ current: true }), []);
+
+  useEffect(() => {
+    if (!location) return;
+    const dam = snapshots.find((s) => s.location === location);
+    if (dam?.latitude == null || dam.longitude == null) return;
+    if (skipFirst.current) {
+      skipFirst.current = false;
+      return;
+    }
+    panMapForPopup(map, [dam.latitude, dam.longitude]);
+  }, [location, snapshots, map, skipFirst]);
+
+  return null;
+}
+
 function PopupFact({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-2 border-b border-slate-100 py-1 last:border-b-0">
@@ -44,6 +78,47 @@ function PopupFact({ label, value }: { label: string; value: string }) {
         {value}
       </p>
     </div>
+  );
+}
+
+function DamMarker({
+  snapshot,
+  active,
+  onSelect,
+}: {
+  snapshot: DamSnapshot;
+  active: boolean;
+  onSelect?: (location: string) => void;
+}) {
+  const map = useMap();
+  const color = markerColor(snapshot);
+
+  return (
+    <CircleMarker
+      center={[snapshot.latitude!, snapshot.longitude!]}
+      radius={markerRadius(snapshot, active)}
+      pathOptions={{
+        color: active ? "#0f172a" : "#ffffff",
+        weight: active ? 2.5 : 2,
+        fillColor: color,
+        fillOpacity: 0.92,
+      }}
+      eventHandlers={{
+        click: () => {
+          onSelect?.(snapshot.location);
+          panMapForPopup(map, [snapshot.latitude!, snapshot.longitude!]);
+        },
+      }}
+    >
+      <Popup
+        maxWidth={320}
+        minWidth={300}
+        className="dam-map-popup"
+        autoPan={false}
+      >
+        <DamPopup snapshot={snapshot} />
+      </Popup>
+    </CircleMarker>
   );
 }
 
@@ -176,43 +251,25 @@ export function DamMapLeaflet({
       center={center}
       zoom={9}
       scrollWheelZoom
-      className="z-0 h-[420px] w-full rounded-xl"
-      style={{ minHeight: 420 }}
+      className="z-0 h-[640px] w-full rounded-xl"
+      style={{ minHeight: 640 }}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      {withCoords.map((s) => {
-        const active = s.location === highlightLocation;
-        const color = markerColor(s);
-        return (
-          <CircleMarker
-            key={s.location}
-            center={[s.latitude!, s.longitude!]}
-            radius={markerRadius(s, active)}
-            pathOptions={{
-              color: active ? "#0f172a" : "#ffffff",
-              weight: active ? 2.5 : 2,
-              fillColor: color,
-              fillOpacity: 0.92,
-            }}
-            eventHandlers={{
-              click: () => onSelect?.(s.location),
-            }}
-          >
-            <Popup
-              maxWidth={320}
-              minWidth={300}
-              className="dam-map-popup"
-              autoPan
-              autoPanPadding={[20, 28]}
-            >
-              <DamPopup snapshot={s} />
-            </Popup>
-          </CircleMarker>
-        );
-      })}
+      <FlyToHighlightedDam
+        snapshots={withCoords}
+        location={highlightLocation}
+      />
+      {withCoords.map((s) => (
+        <DamMarker
+          key={s.location}
+          snapshot={s}
+          active={s.location === highlightLocation}
+          onSelect={onSelect}
+        />
+      ))}
     </MapContainer>
   );
 }
