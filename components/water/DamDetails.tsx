@@ -10,6 +10,7 @@ import { formatDamDateLabel } from "@/lib/dams-format";
 import { Card } from "@/components/ui/Card";
 import { DamFillGauge } from "@/components/water/DamFillGauge";
 import { DamSelect } from "@/components/water/DamSelect";
+import { getDamSlideProfile } from "@/lib/dams-profiles";
 
 type Props = {
   damNames: string[];
@@ -46,6 +47,8 @@ export function DamDetails({
   onLocationChange,
   dam,
 }: Props) {
+  const profile = dam ? getDamSlideProfile(dam.location) : undefined;
+
   return (
     <Card className="p-5">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -88,6 +91,13 @@ export function DamDetails({
             }
           />
           <Detail label="7-day trend" value={trendLabel(dam.trend7d)} />
+          {profile ? (
+            <>
+              <Detail label="District" value={profile.district} />
+              <Detail label="Tehsil" value={profile.tehsil} />
+              <Detail label="Water supply" value={profile.waterSupply} />
+            </>
+          ) : null}
           <Detail label="Height" value={fmtNum(dam.heightFt, " ft")} />
           <Detail label="Completion cost" value={fmtNum(dam.completionCost, " M")} />
           <Detail label="Gross storage" value={fmtNum(dam.grossStorageAft, " Aft")} />
