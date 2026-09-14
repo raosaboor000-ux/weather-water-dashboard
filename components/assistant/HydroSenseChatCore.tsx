@@ -30,19 +30,19 @@ const PROMPTS = [
     text: "What are the current weather conditions at the station?",
   },
   {
-    label: "Rain",
-    hint: "Precipitation",
-    text: "What is the rainfall and precipitation status right now?",
+    label: "Trends",
+    hint: "Recent history",
+    text: "Summarize recent weather trends from the historical data, including the last 7 days.",
   },
   {
     label: "Dams",
     hint: "Network status",
-    text: "Give a brief overview of dam storage and any spill alerts.",
+    text: "Give an operational overview of dam storage, spill alerts, below-dead dams, and notable rising or falling trends.",
   },
   {
     label: "Brief",
-    hint: "Executive summary",
-    text: "Prepare a concise operational briefing for weather and water levels.",
+    hint: "Full briefing",
+    text: "Prepare a full operational briefing covering live weather, recent weather history trends, and dam network priorities including spill alerts, below-dead storage, and key reservoir levels.",
   },
 ];
 

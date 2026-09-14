@@ -271,7 +271,7 @@
 }
 
 .hs-msg-body {
-  max-width: min(92%, 340px);
+  max-width: min(94%, 380px);
 }
 
 .hs-msg.user .hs-msg-body {
@@ -324,7 +324,7 @@
   margin: 0;
   white-space: pre-wrap;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.55;
   color: #334155;
 }
 

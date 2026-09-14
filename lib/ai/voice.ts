@@ -1,17 +1,17 @@
 /** HydroSense voice helpers — STT/TTS support, mic unlock, recent chat. */
 
-export const RECENT_MESSAGE_LIMIT = 3;
+export const RECENT_MESSAGE_LIMIT = 5;
 
 export const HYDROSENSE_GREETING =
   "Welcome to HydroSense AI — your weather and water-level analyst.\n\n" +
-  "I can help with live station conditions and dam reservoir levels across this dashboard.\n\n" +
+  "I can help with live station conditions, recent weather history trends, and dam reservoir levels across this dashboard.\n\n" +
   "Type your question or tap the microphone to speak.";
 
 export const HYDROSENSE_GREETING_SPEAK =
-  "Welcome to HydroSense AI. Ask me about live weather at the station, or dam water levels and storage.";
+  "Welcome to HydroSense AI. Ask me about live weather, recent trends, or dam water levels and storage.";
 
 export const HYDROSENSE_CLEARED =
-  "Conversation cleared. Ask about station weather or dam water levels — by text or voice.";
+  "Conversation cleared. Ask about station weather, history trends, or dam water levels — by text or voice.";
 
 export type VoiceSupport = {
   stt: boolean;

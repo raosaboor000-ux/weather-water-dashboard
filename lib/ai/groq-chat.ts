@@ -8,17 +8,24 @@ const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const SYSTEM_PROMPT = `You are HydroSense AI, the weather and water-level analyst for the AWS6 weather and dams dashboard.
 
 Rules:
-- Answer ONLY using the dashboard data supplied in each request (station weather and dam water levels).
+- Answer ONLY using the dashboard data supplied in each request. That block may include live station weather, weather history summaries (7/30-day stats and recent daily rows), dam network KPIs, named spill/below-dead lists, dam design levels (DSL/NPL/HFL), and recent level series for notable dams.
 - Focus on the personal weather station AWS6 / ITALAG18 and the dam network shown in this dashboard.
 - Present readings as operational intelligence (e.g. "Temperature is 32°C…", "Tarbela is at 85% fill…").
 - NEVER mention APIs, Groq, Weather Underground, Google Sheets, dummy data, preview mode, raw data, or data sources.
 - If a value is unavailable, say "That reading is not available at the moment."
-- Keep answers clear, professional, and concise. Use °C, km/h, mm, ft, and local time as given in the data.
+- Match answer depth and TOPIC to the question:
+  - If the user asks only about dams / reservoirs / spill / storage, answer with dam data only — do NOT include station weather or weather history.
+  - If the user asks only about weather / temperature / rain / trends, answer with weather data only — do NOT include the dam network.
+  - Short factual questions get a tight reply.
+  - Briefing / multi-topic overview questions should be structured and cover every requested topic (live weather, recent weather trends when present, dam priorities).
+- When the user asks for a briefing or anything covering multiple topics (weather + history + dams), you MUST address EVERY requested topic in the same reply. Never answer only the weather/history part and defer dams to a follow-up.
+- Prefer clear sections with short headings and bullet points (•) or numbered lists for any multi-item answer (briefings, dam summaries, trends). Never dump everything into one long paragraph.
+- Do not invent values not present in the data.
+- Use °C, km/h, mm, ft, and local time as given in the data.
 - When recent conversation messages are included, use them to resolve follow-ups without asking the user to repeat context.
 - You do not issue official flood warnings or operational orders.
-- Do not invent values not present in the data.
-- For dam questions, use spill status, storage status, fill %, trends, and levels from the dam block.
-- For weather questions, use current station conditions from the weather block.`;
+- For dam questions, use spill status, storage status, fill %, DSL/NPL/HFL, river/catchment when present, 7d trends, and any recent level series.
+- For weather questions, use live station conditions plus history summaries/daily rows when the user asks about trends, recent days, or comparisons.`;
 
 export type ChatMessage = { role: string; content: string };
 
@@ -76,7 +83,7 @@ export async function handleHydroSenseChat(
 
   const model = env.GROQ_MODEL?.trim() || "llama-3.3-70b-versatile";
   const context = reqBody.context ?? {};
-  const prior = Array.isArray(reqBody.messages) ? reqBody.messages.slice(-3) : [];
+  const prior = Array.isArray(reqBody.messages) ? reqBody.messages.slice(-5) : [];
 
   const messages = [
     { role: "system", content: SYSTEM_PROMPT },
@@ -84,7 +91,7 @@ export async function handleHydroSenseChat(
     { role: "user", content: buildUserMessage(prompt, context) },
   ];
 
-  const timeoutMs = Number(env.GROQ_TIMEOUT_MS) || 20000;
+  const timeoutMs = Number(env.GROQ_TIMEOUT_MS) || 25000;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
 
@@ -99,7 +106,7 @@ export async function handleHydroSenseChat(
         model,
         messages,
         temperature: 0.3,
-        max_tokens: 1200,
+        max_tokens: 2000,
       }),
       signal: ctrl.signal,
     });
@@ -128,7 +135,12 @@ export async function handleHydroSenseChat(
       body: {
         answer,
         text: answer,
-        sources: ["HydroSense AI", "Station weather", "Dam levels"],
+        sources: [
+          "HydroSense AI",
+          "Station weather",
+          "Weather history",
+          "Dam levels",
+        ],
         model,
       },
     };
