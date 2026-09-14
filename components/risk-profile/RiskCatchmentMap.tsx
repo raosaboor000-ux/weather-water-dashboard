@@ -15,7 +15,6 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import {
   CATCHMENTS,
-  type CatchmentProfile,
   type MiniDamPoint,
   type RainfallEvent,
 } from "@/lib/risk-profile-data";
