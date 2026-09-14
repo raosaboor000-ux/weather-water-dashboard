@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { CurrentWeatherPage } from "@/components/current/CurrentWeatherPage";
 import { HistoricalWeatherPage } from "@/components/historical/HistoricalWeatherPage";
+import { RiskProfilePage } from "@/components/risk-profile/RiskProfilePage";
 import { WaterLevelsPage } from "@/components/water/WaterLevelsPage";
 import {
   getSectionFromHash,
@@ -62,6 +63,13 @@ export function DashboardPage({ initialSection }: Props) {
         className={`${SECTION_SCROLL_MARGIN} border-t border-slate-200/80`}
       >
         <HistoricalWeatherPage />
+      </section>
+
+      <section
+        id="risk-profile"
+        className={`${SECTION_SCROLL_MARGIN} border-t border-slate-200/80`}
+      >
+        <RiskProfilePage />
       </section>
     </>
   );

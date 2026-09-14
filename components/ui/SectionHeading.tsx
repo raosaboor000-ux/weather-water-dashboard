@@ -9,12 +9,14 @@ type Props = {
 export function SectionHeading({ title, description, action }: Props) {
   return (
     <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-      <div>
+      <div className="min-w-0 flex-1">
         <h2 className="font-display text-lg font-semibold tracking-tight text-ink">
           {title}
         </h2>
         {description ? (
-          <p className="mt-1 text-sm text-ink-subtle">{description}</p>
+          <p className="mt-1.5 w-full max-w-none text-sm leading-relaxed text-ink-muted">
+            {description}
+          </p>
         ) : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}

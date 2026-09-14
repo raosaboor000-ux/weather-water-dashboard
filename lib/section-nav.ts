@@ -1,10 +1,11 @@
-import { CloudSun, Droplets, History } from "lucide-react";
+import { CloudSun, Droplets, History, ShieldAlert } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export const DASHBOARD_SECTIONS = [
   { id: "current", label: "Current Weather", icon: CloudSun },
   { id: "water-levels", label: "Water Levels", icon: Droplets },
   { id: "historical", label: "Historical Weather", icon: History },
+  { id: "risk-profile", label: "Risk Profile", icon: ShieldAlert },
 ] as const;
 
 export type DashboardSectionId = (typeof DASHBOARD_SECTIONS)[number]["id"];

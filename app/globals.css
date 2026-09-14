@@ -113,3 +113,38 @@ body {
   background: rgba(15, 23, 42, 0.92) !important;
   color: #ffffff !important;
 }
+
+/* Risk Profile — interactive map (artifact-style chrome) */
+.risk-interactive-leaflet.leaflet-container {
+  background: #f1f5f9;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  /* Keep Leaflet panes/controls inside this stacking context so they
+     cannot paint over the sticky top nav (z-[1100]). */
+  z-index: 0 !important;
+  isolation: isolate;
+}
+
+.leaflet-container {
+  z-index: 0;
+}
+
+.risk-interactive-leaflet .leaflet-control-zoom a {
+  background: #fff !important;
+  color: #111 !important;
+  border-bottom-color: #e5e5e5 !important;
+  width: 30px !important;
+  height: 30px !important;
+  line-height: 30px !important;
+  font-size: 16px !important;
+}
+
+.risk-interactive-leaflet .leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+  margin: 12px !important;
+}
+
+.risk-dam-label {
+  background: transparent !important;
+  border: none !important;
+}
