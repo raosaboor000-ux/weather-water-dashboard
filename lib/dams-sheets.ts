@@ -88,7 +88,9 @@ async function fetchDamsSheetValues(
   tab: string
 ): Promise<string[][]> {
   const quoted = quoteSheetName(tab);
-  const ranges = [`${quoted}!A:R`, `${quoted}!A:Z`, quoted];
+  // Prefer wide ranges so columns after Longitude (e.g. Rain Gauge (mm) in S+) are included.
+  // Do not use A:R first — that truncates before the rain column and still "succeeds".
+  const ranges = [`${quoted}!A:Z`, `${quoted}!A:AZ`, quoted];
 
   let lastError: unknown;
   for (const range of ranges) {

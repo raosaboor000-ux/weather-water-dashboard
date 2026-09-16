@@ -223,10 +223,11 @@ export function WaterLevelChart({
             />
           ) : !hasRainValues ? (
             <p className="flex h-full items-center justify-center px-4 text-center text-sm text-ink-subtle">
-              No rain values for this dam in the selected range. Add a{" "}
-              <strong className="mx-1 font-semibold text-ink">Rain_mm</strong>{" "}
-              column to the dams Google Sheet (after Longitude) and enter daily
-              values.
+              No rain values for this dam in the selected range. Add values in the{" "}
+              <strong className="mx-1 font-semibold text-ink">
+                Rain Gauge (mm)
+              </strong>{" "}
+              column of the dams Google Sheet.
             </p>
           ) : (
             <Line data={rainChart} options={rainOptions} />

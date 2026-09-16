@@ -35,7 +35,7 @@ export type DamReading = {
   date: string;
   location: string;
   waterLevelFt: number;
-  /** Daily rainfall (mm) from the dams Google Sheet Rain column, when present. */
+  /** Daily rainfall (mm) from the dams Google Sheet "Rain Gauge (mm)" column, when present. */
   rainMm?: number;
 };
 

@@ -81,7 +81,7 @@ function mergeMeta(base: DamMetadata, patch: Partial<DamMetadata>): DamMetadata 
 }
 
 export const DAMS_CSV_HEADER =
-  "Date,Location,Water_Level_ft,Height (ft),Completion Cost,Gross Storage Capacity (Aft),Live storage (Aft),C.C.A. (Acres),Capacity of Channel (Cfs),Length of Canal (ft),DSL (ft),NPL (ft),HFL (ft),River / Nullah,Year of Completion,Catchment Area (Sq. Km),Latitude,Longitude,Rain_mm";
+  "Date,Location,Water_Level_ft,Height (ft),Completion Cost,Gross Storage Capacity (Aft),Live storage (Aft),C.C.A. (Acres),Capacity of Channel (Cfs),Length of Canal (ft),DSL (ft),NPL (ft),HFL (ft),River / Nullah,Year of Completion,Catchment Area (Sq. Km),Latitude,Longitude,Rain Gauge (mm)";
 
 function formatDamDateCsv(ymd: string): string {
   const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -264,21 +264,24 @@ export function parseDamsSheetValues(values: string[][]): DamsDataset {
     start = 1;
     rainCol = findRainColumnIndex(values[0]!.map(String));
   }
-  // Default: after Longitude (index 17) → Rain_mm at index 18
+  // Default: after Longitude (index 17) → Rain Gauge (mm) at index 18
   if (rainCol == null) rainCol = 18;
 
   return parseDamsDataRows(values.slice(start), rainCol);
 }
 
-/** Locate Rain / Rain_mm / Rainfall header (case-insensitive). */
+/** Locate Rain Gauge (mm) / Rain_mm / Rainfall header (case-insensitive). */
 export function findRainColumnIndex(headerRow: string[]): number | null {
   const idx = headerRow.findIndex((h) => {
     const t = h.toLowerCase().replace(/[^a-z0-9]/g, "");
     return (
       t === "rain" ||
       t === "rainmm" ||
+      t === "raingaugemm" ||
+      t === "raingauge" ||
       t === "rainfall" ||
       t === "rainfallmm" ||
+      t.startsWith("raingauge") ||
       t.startsWith("rain")
     );
   });
