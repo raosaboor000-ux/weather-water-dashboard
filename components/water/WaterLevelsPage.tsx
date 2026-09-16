@@ -207,7 +207,6 @@ export function WaterLevelsPage() {
               onLocationChange={setFocusDam}
               damMeta={damMetaByName.get(focusDam)}
               readings={readingsQuery.data?.readings ?? []}
-              trend={readingsQuery.data?.trend}
               from={chartFrom}
               to={chartTo}
               onFromChange={setChartFrom}

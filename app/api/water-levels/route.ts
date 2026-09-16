@@ -3,6 +3,7 @@ import { appConfig } from "@/lib/config";
 import {
   getDamsDataMeta,
   getDamsDataset,
+  getRainSeriesForRange,
   getReadingsForDam,
   getTrendSummary,
   getWaterOverview,
@@ -63,6 +64,28 @@ export async function GET(request: Request) {
         { location, from, to, readings, trend },
         { headers: noStore }
       );
+    }
+
+    if (mode === "rain") {
+      const dataset = await getDamsDataset();
+      const to = url.searchParams.get("to") || dataset.latestDate;
+      const from =
+        url.searchParams.get("from") ||
+        (to
+          ? (() => {
+              const d = new Date(`${to}T12:00:00Z`);
+              d.setUTCDate(d.getUTCDate() - 6);
+              return d.toISOString().slice(0, 10);
+            })()
+          : "");
+      if (!from || !to) {
+        return NextResponse.json(
+          { error: "from and to dates are required" },
+          { status: 400, headers: noStore }
+        );
+      }
+      const payload = await getRainSeriesForRange(from, to);
+      return NextResponse.json(payload, { headers: noStore });
     }
 
     const date = url.searchParams.get("date") ?? "";

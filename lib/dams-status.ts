@@ -211,6 +211,7 @@ function snapshotFromReading(
     ),
     spillStatus: spillStatus(reading.waterLevelFt, meta.nplFt),
     trend7d: trendDirection(reading.waterLevelFt, prior7?.waterLevelFt),
+    ...(reading.rainMm != null ? { rainMm: reading.rainMm } : {}),
   };
 }
 

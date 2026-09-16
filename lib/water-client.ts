@@ -83,6 +83,29 @@ export async function fetchDamReadings(
   return readApi<WaterReadingsResponse>(`/api/water-levels?${params}`);
 }
 
+export type WaterRainSeriesResponse = {
+  from: string;
+  to: string;
+  dates: string[];
+  series: {
+    location: string;
+    points: { date: string; rainMm: number | null }[];
+  }[];
+  hasRain: boolean;
+};
+
+export async function fetchDamRainSeries(
+  from: string,
+  to: string
+): Promise<WaterRainSeriesResponse> {
+  const params = new URLSearchParams({
+    mode: "rain",
+    from,
+    to,
+  });
+  return readApi<WaterRainSeriesResponse>(`/api/water-levels?${params}`);
+}
+
 export type CsvUploadResult = {
   ok: boolean;
   rowsAdded: number;

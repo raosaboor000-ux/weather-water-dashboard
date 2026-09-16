@@ -81,7 +81,7 @@ function mergeMeta(base: DamMetadata, patch: Partial<DamMetadata>): DamMetadata 
 }
 
 export const DAMS_CSV_HEADER =
-  "Date,Location,Water_Level_ft,Height (ft),Completion Cost,Gross Storage Capacity (Aft),Live storage (Aft),C.C.A. (Acres),Capacity of Channel (Cfs),Length of Canal (ft),DSL (ft),NPL (ft),HFL (ft),River / Nullah,Year of Completion,Catchment Area (Sq. Km),Latitude,Longitude";
+  "Date,Location,Water_Level_ft,Height (ft),Completion Cost,Gross Storage Capacity (Aft),Live storage (Aft),C.C.A. (Acres),Capacity of Channel (Cfs),Length of Canal (ft),DSL (ft),NPL (ft),HFL (ft),River / Nullah,Year of Completion,Catchment Area (Sq. Km),Latitude,Longitude,Rain_mm";
 
 function formatDamDateCsv(ymd: string): string {
   const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -95,7 +95,12 @@ function cell(v: string | number | undefined): string {
   return s.includes(",") ? `"${s}"` : s;
 }
 
-function metadataRow(d: DamMetadata, date: string, waterLevelFt: number): string {
+function metadataRow(
+  d: DamMetadata,
+  date: string,
+  waterLevelFt: number,
+  rainMm?: number
+): string {
   return [
     formatDamDateCsv(date),
     d.location,
@@ -115,6 +120,7 @@ function metadataRow(d: DamMetadata, date: string, waterLevelFt: number): string
     d.catchmentSqKm,
     d.latitude,
     d.longitude,
+    rainMm,
   ]
     .map(cell)
     .join(",");
@@ -141,11 +147,17 @@ export function serializeDamsCsv(dataset: DamsDataset): string {
 
     for (const r of rows) {
       if (!metaWritten && hasMetadata(meta)) {
-        lines.push(metadataRow(meta, r.date, r.waterLevelFt));
+        lines.push(metadataRow(meta, r.date, r.waterLevelFt, r.rainMm));
         metaWritten = true;
       } else {
         lines.push(
-          [formatDamDateCsv(r.date), r.location, r.waterLevelFt, ...Array(15).fill("")]
+          [
+            formatDamDateCsv(r.date),
+            r.location,
+            r.waterLevelFt,
+            ...Array(15).fill(""),
+            r.rainMm ?? "",
+          ]
             .map(cell)
             .join(",")
         );
@@ -246,13 +258,37 @@ export function parseDamsSheetValues(values: string[][]): DamsDataset {
   }
 
   let start = 0;
+  let rainCol: number | null = null;
   const first = values[0]?.[0]?.toLowerCase() ?? "";
-  if (first.includes("date")) start = 1;
+  if (first.includes("date")) {
+    start = 1;
+    rainCol = findRainColumnIndex(values[0]!.map(String));
+  }
+  // Default: after Longitude (index 17) → Rain_mm at index 18
+  if (rainCol == null) rainCol = 18;
 
-  return parseDamsDataRows(values.slice(start));
+  return parseDamsDataRows(values.slice(start), rainCol);
 }
 
-function parseDamsDataRows(rows: string[][]): DamsDataset {
+/** Locate Rain / Rain_mm / Rainfall header (case-insensitive). */
+export function findRainColumnIndex(headerRow: string[]): number | null {
+  const idx = headerRow.findIndex((h) => {
+    const t = h.toLowerCase().replace(/[^a-z0-9]/g, "");
+    return (
+      t === "rain" ||
+      t === "rainmm" ||
+      t === "rainfall" ||
+      t === "rainfallmm" ||
+      t.startsWith("rain")
+    );
+  });
+  return idx >= 0 ? idx : null;
+}
+
+function parseDamsDataRows(
+  rows: string[][],
+  rainCol: number | null = 18
+): DamsDataset {
   const metaByLocation = new Map<string, DamMetadata>();
   const readings: DamReading[] = [];
   const dateSet = new Set<string>();
@@ -269,7 +305,17 @@ function parseDamsDataRows(rows: string[][]): DamsDataset {
     const existing = metaByLocation.get(location) ?? { location };
     metaByLocation.set(location, mergeMeta(existing, patch));
 
-    readings.push({ date, location, waterLevelFt });
+    const rainMm =
+      rainCol != null && rainCol < cells.length
+        ? num(String(cells[rainCol] ?? ""))
+        : undefined;
+
+    readings.push({
+      date,
+      location,
+      waterLevelFt,
+      ...(rainMm != null ? { rainMm } : {}),
+    });
     dateSet.add(date);
   }
 
@@ -294,10 +340,16 @@ export function parseDamsCsv(content: string): DamsDataset {
 
   const rows = lines.map(parseCsvLine);
   let start = 1;
+  let rainCol: number | null = 18;
   const first = rows[0]?.[0]?.toLowerCase() ?? "";
-  if (!first.includes("date")) start = 0;
+  if (first.includes("date")) {
+    start = 1;
+    rainCol = findRainColumnIndex(rows[0]!) ?? 18;
+  } else {
+    start = 0;
+  }
 
-  return parseDamsDataRows(rows.slice(start));
+  return parseDamsDataRows(rows.slice(start), rainCol);
 }
 
 let cached: DamsDataset | null = null;

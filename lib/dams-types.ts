@@ -35,6 +35,8 @@ export type DamReading = {
   date: string;
   location: string;
   waterLevelFt: number;
+  /** Daily rainfall (mm) from the dams Google Sheet Rain column, when present. */
+  rainMm?: number;
 };
 
 export type DamSnapshot = DamMetadata & {
@@ -44,6 +46,7 @@ export type DamSnapshot = DamMetadata & {
   storageStatus: StorageStatus;
   spillStatus: SpillStatus;
   trend7d: TrendDirection;
+  rainMm?: number;
 };
 
 export type DamsDataset = {

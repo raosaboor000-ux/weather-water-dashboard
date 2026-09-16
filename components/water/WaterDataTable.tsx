@@ -123,6 +123,7 @@ export function WaterDataTable({ snapshots }: Props) {
             <tr>
               <th className="px-3 py-2">Location</th>
               <th className="px-3 py-2">Water level (ft)</th>
+              <th className="px-3 py-2">Rain (mm)</th>
               <th className="px-3 py-2">DSL (ft)</th>
               <th className="px-3 py-2">NPL (ft)</th>
               <th className="px-3 py-2">Capacity %</th>
@@ -151,6 +152,9 @@ export function WaterDataTable({ snapshots }: Props) {
                   </td>
                   <td className="px-3 py-2 tabular-nums">
                     {s.waterLevelFt.toFixed(1)}
+                  </td>
+                  <td className="px-3 py-2 tabular-nums text-ink-muted">
+                    {s.rainMm != null ? s.rainMm.toFixed(1) : "—"}
                   </td>
                   <td className="px-3 py-2 tabular-nums text-ink-muted">
                     {s.dslFt?.toFixed(1) ?? "—"}

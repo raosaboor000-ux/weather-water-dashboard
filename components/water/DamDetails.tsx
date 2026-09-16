@@ -78,6 +78,10 @@ export function DamDetails({
             value={`${dam.waterLevelFt.toFixed(1)} ft`}
           />
           <Detail
+            label="Rain"
+            value={dam.rainMm != null ? `${dam.rainMm.toFixed(1)} mm` : "—"}
+          />
+          <Detail
             label="Storage fill"
             value={dam.fillPct != null ? `${dam.fillPct.toFixed(1)}%` : "—"}
           />
